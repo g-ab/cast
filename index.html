@@ -1,0 +1,2937 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cast</title>
+<link rel="icon" type="image/svg+xml" href="brand/favicon.svg">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<!-- Icons: Lucide 1.80 (lucide.dev), ISC licence, © Lucide Contributors. Inlined as SVG; stroke from --icon-stroke. -->
+<!-- Clay (Plain CSS). Loaded before the app's own styles: until pass 2 the app's values still win, so nothing changes yet. -->
+<link rel="stylesheet" href="clay-theme.css">
+<link rel="stylesheet" href="app-tokens.css">
+<link rel="stylesheet" href="clay-icons.css">
+<link rel="stylesheet" href="brand/brand.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  /* Layout: a drafting table. Three orthographic views in third-angle layout (Top above Front, Side beside Front), inspector on the right. */
+  /* colours and typefaces come from clay-theme.css (core) and app-tokens.css (app) */
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){color-scheme:dark}}
+:root[data-theme="dark"]{color-scheme:dark}
+
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--paper);color:var(--ink);font:14px/1.45 var(--font-ui);letter-spacing:var(--tracking);display:grid;grid-template-rows:auto 1fr;overflow:hidden}
+
+header{display:flex;align-items:center;gap:var(--space-3);padding:var(--space-2) var(--space-3);border-bottom:1px solid var(--rule);background:var(--sheet);flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:var(--gap);margin-right:var(--space-2);font-weight:600;letter-spacing:.01em}
+.brand small{font:500 11px var(--font-mono);color:var(--muted);text-transform:uppercase;letter-spacing:.07em}
+.unit-tag{font:500 11px var(--font-mono);color:var(--muted);text-transform:uppercase;letter-spacing:.07em;padding:2px 4px 2px 6px;gap:3px;border:1px solid var(--rule);border-radius:var(--radius-sm)}
+.unit-tag svg{width:12px;height:12px}
+.brand{position:relative}
+.menu{position:absolute;top:calc(100% + var(--space-3));left:0;z-index:25;width:260px;background:var(--sheet);border:1px solid var(--rule);border-radius:var(--radius-menu);box-shadow:var(--shadow-floating);padding:var(--space-3);font-weight:400;letter-spacing:0}
+.menu[hidden]{display:none}
+.filestack{display:grid;gap:var(--space-2)}
+/* settings menu: File, Drawing, Patterns */
+.menu.settings{gap:0}
+.msec{display:grid;gap:var(--space-3);padding:var(--space-3) 0}
+.msec:first-child{padding-top:2px}
+.msec:last-child{padding-bottom:2px}
+.msec+.msec{border-top:1px solid var(--rule)}
+.msec h3{margin:0;font:600 11px var(--font-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.filestack button{color:var(--ink)}
+.filestack button{justify-content:center;font-size:13px}
+.brand-home{font:inherit;font-weight:600;padding:0;border:0;background:none;letter-spacing:.01em;display:inline-flex;align-items:center}
+/* Clay logo: sized by height only, the files are trimmed to the drawing */
+.brand-logo{height:20px;width:auto;vertical-align:middle}
+.brand-home:hover:not(:disabled){background:none;color:var(--accent)}
+body:not(.home) .brand-home:hover .brand-logo{opacity:.7}
+.docwrap{display:flex;align-items:center;gap:var(--space-2);font-weight:400}
+.docsep{color:var(--rule)}
+/* the name edits in place: click, type, Enter (Esc puts it back) */
+.docname{color:var(--muted);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:1px 5px;margin:0 -5px;border-radius:var(--radius-md);outline:none;cursor:text}
+.docname:hover{background:var(--hover);color:var(--ink)}
+.docname:focus,.docname:focus-visible{outline:var(--focus-outline);background:var(--paper);color:var(--ink);box-shadow:var(--focus-ring);text-overflow:clip;min-width:60px}
+.docdot{width:6px;height:6px;border-radius:50%;background:var(--accent);flex:none}
+.docdot[hidden]{display:none}
+.modal{position:fixed;inset:0;z-index:60;background:rgba(10,20,30,.28);display:flex;align-items:center;justify-content:center}
+.modal[hidden]{display:none}
+.modal-card{position:relative;background:var(--sheet);border-radius:var(--radius-xl);box-shadow:var(--shadow-overlay);padding:var(--space-4);width:min(380px,calc(100% - 32px));display:grid;gap:var(--gap)}
+.modal-card h2{margin:0;padding-right:28px;font-size:15px;font-weight:600}
+.modal-x{position:absolute;top:var(--space-3);right:var(--space-3);width:var(--control-xs);height:var(--control-xs);padding:0;justify-content:center;color:var(--muted)}
+.modal-card p{margin:0;color:var(--muted);font-size:13px}
+.modal-card .row{justify-content:flex-end;margin-top:var(--space-3)}
+.spacer{flex:1}
+
+button{font:inherit;color:inherit;background:transparent;border:1px solid transparent;border-radius:var(--radius-md);padding:6px 10px;cursor:pointer;display:inline-flex;align-items:center;gap:var(--space-2);white-space:nowrap}
+button:hover:not(:disabled){background:var(--hover)}
+button:disabled{opacity:.45;cursor:default}
+button svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-linecap:round;stroke-linejoin:round;flex:none}
+/* focus: Clay's ring. !important so pressed/raised states that set their own shadow still show it */
+button:focus-visible,select:focus-visible{outline:var(--focus-outline);box-shadow:var(--focus-ring)!important}
+input:focus-visible{outline:var(--focus-outline);box-shadow:var(--focus-ring),var(--shadow-inset)!important}
+/* inside clipped groups the ring sits inside the button */
+.pair>button:focus-visible{box-shadow:inset 0 0 0 var(--focus-width) var(--focus)!important}
+.btn{border-color:var(--rule);background:var(--sheet);min-height:var(--control-md)}
+.btn.icon{padding:6px 8px}
+.primary{min-height:var(--control-md);background:var(--accent);color:var(--on-accent);border-color:var(--accent);font-weight:500}
+.primary:hover:not(:disabled){background:var(--accent-strong)}
+.primary .count{font:500 11px var(--font-mono);background:color-mix(in oklab,var(--on-accent) 22%,transparent);border-radius:var(--radius-pill);padding:0 6px}
+.seg{display:flex;gap:2px;padding:2px;background:var(--paper);border:1px solid var(--rule);border-radius:var(--radius-segmented)}
+.mode{margin-top:var(--space-1)}
+.mode button{flex:1;justify-content:center;height:calc(var(--control-md) - 6px);padding-block:0}
+.seg button[aria-pressed="true"]{background:var(--sheet);border-color:var(--rule);color:var(--accent);box-shadow:var(--shadow-raised)}
+.pair{display:flex;margin-right:var(--space-1);border:1px solid var(--rule);border-radius:var(--radius-md);overflow:hidden}
+.pair>button{border:0;border-radius:0}
+.pair>button+button{border-left:1px solid var(--rule)}
+.dd{position:relative;display:flex}
+.dd .pair{margin-right:0}
+.pair>.caret{padding:6px 5px}
+.pair>.caret svg{width:14px;height:14px}
+.menu.mini{width:auto;min-width:160px;padding:var(--space-1);top:calc(100% + var(--space-2))}
+.menu.mini button{width:100%;justify-content:flex-start}
+.seg .pair>button[aria-pressed="true"]{box-shadow:none}
+kbd{font:500 10px var(--font-mono);color:var(--muted);border:1px solid var(--rule);border-radius:var(--radius-xs);padding:0 4px;line-height:15px}
+
+main{position:relative;display:grid;grid-template-columns:minmax(0,1fr) 290px;min-height:0}
+.sheet{position:relative;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:3px;padding:0;margin:var(--space-2);background:var(--rule);border:0;border-radius:0;overflow:hidden;min-height:0;min-width:0}
+.view{position:relative;background:var(--sheet);border:0;border-radius:0;overflow:hidden;min-height:0}
+.view svg{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none;user-select:none;-webkit-user-select:none}
+.vlabel{position:absolute;top:var(--space-2);left:var(--space-2);font:600 11px var(--font-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--ink);pointer-events:none;background:var(--sheet);border:0;box-shadow:var(--shadow-raised);padding:4px 11px;border-radius:var(--radius-pill)}
+.vlabel span{font-weight:400;color:var(--muted);margin-left:var(--space-2);letter-spacing:.04em}
+.chip{position:absolute;left:var(--space-2);bottom:var(--space-2);right:var(--space-2);max-width:360px;font-size:12.5px;background:var(--sheet);border:1px dashed var(--accent);color:var(--ink);padding:6px 9px;border-radius:var(--radius-md);pointer-events:none}
+.chip b{color:var(--accent);font-weight:600}
+
+.printer{position:fixed;inset:0;z-index:40;background:var(--paper);display:flex;flex-direction:column}
+.printer[hidden]{display:none}
+.pr-field{display:flex;align-items:center;gap:var(--gap);font-size:13px;color:var(--muted)}
+.pr-field select,.pr-field input{width:auto;min-width:84px}
+.pr-info{font:500 12px var(--font-mono);color:var(--muted)}
+.pr-status{font-size:13px;color:var(--muted)}
+.pr-pages{flex:1;position:relative;overflow:hidden;min-height:0;background-image:radial-gradient(var(--grid-major) 1px,transparent 1px);background-size:18px 18px;touch-action:none}
+.pr-board{position:absolute;left:0;top:0;transform-origin:0 0;display:grid;gap:var(--space-12);align-items:start}
+.pr-page{margin:0;display:grid;gap:var(--space-2)}
+.pr-page svg{overflow:visible;width:100%;height:auto;display:block;box-shadow:var(--shadow-raised);border-radius:var(--radius-xs);background:#fff}
+.pr-page figcaption{font:500 22px var(--font-mono);color:var(--muted)}
+.pr-wait{color:var(--muted)}
+.pr-sel{font:500 12px var(--font-mono);color:var(--accent);font-variant-numeric:tabular-nums}
+.pr-warn{color:var(--danger)}
+.pr-page.lift{position:relative;z-index:5}
+.pr-page.lift svg{overflow:visible}
+.pr-page .pitem{cursor:move}
+.pr-page .phit{fill:transparent;pointer-events:all}
+.pr-page .pitem:hover .pcut{fill:#ece0d6}
+.pr-page .pitem.on .pcut{fill:#e3edfb;stroke:#0b5fd0}
+.pr-page .pitem.off .pcut{stroke:#c2410c;stroke-dasharray:2 1}
+.pr-page .psel{fill:none;stroke:#0b5fd0;stroke-width:var(--sw,.25);stroke-dasharray:calc(var(--sw,.25)*4) calc(var(--sw,.25)*3)}
+.pr-page .pdim{stroke:#0b5fd0;stroke-width:var(--sw,.25);fill:none}
+.pr-page .pdimt{font:600 3.4px var(--font-mono);fill:#0b5fd0;text-anchor:middle;paint-order:stroke;stroke:#fff;stroke-width:.8px}
+.pr-page .pmargin{fill:none;stroke:#cfd6de;stroke-width:.2;stroke-dasharray:1 1.5}
+.pr-page .pguide{stroke:#0b5fd0;stroke-width:var(--sw,.25);stroke-dasharray:calc(var(--sw,.25)*5) calc(var(--sw,.25)*4)}
+.pr-ang{display:flex;align-items:center;gap:2px;height:var(--control-md);padding:0 4px;color:var(--muted);font:500 12px var(--font-mono)}
+.pr-ang input{width:58px;height:var(--control-sm);padding:0 6px;text-align:right}
+.pr-page .prot{fill:#fff;stroke:#0b5fd0;stroke-width:var(--sw,.25);r:calc(var(--sw,.25)*5px);cursor:grab}
+.pr-page .prot:hover{fill:#e3edfb}
+.pr-page .prstem{stroke:#0b5fd0;stroke-width:var(--sw,.25);pointer-events:none}
+.pr-page .prang{font:600 3.4px var(--font-mono);fill:#0b5fd0;paint-order:stroke;stroke:#fff;stroke-width:.8px}
+.pr-rotating,.pr-rotating *{cursor:grabbing!important}
+.pr-page .pempty{font:4px var(--font-ui);fill:#9aa4ae;text-anchor:middle}
+.pr-zoom{display:flex;align-items:center;gap:var(--space-1)}
+.pr-zv{font:500 12px var(--font-mono);min-width:44px;text-align:center;color:var(--muted);font-variant-numeric:tabular-nums}
+.pr-pages{cursor:grab;user-select:none;-webkit-user-select:none}
+.pr-pages.panning{cursor:grabbing}
+.pr-page .ph{font:3px var(--font-mono);fill:#666}
+/* on screen, lines stay 1 px at any zoom (like Figma): --sw is one screen pixel in mm, set as you zoom. The PDF uses 0.5 pt */
+.pr-page .pcut{fill:#f6efe9;stroke:#111;stroke-width:var(--sw,.25)}
+.pr-page .pfold{fill:none;stroke:#111;stroke-width:var(--sw,.25);stroke-dasharray:calc(var(--sw,.25)*6) calc(var(--sw,.25)*4);pointer-events:none}
+.pr-page .plab{font:600 4px var(--font-ui);fill:#222;text-anchor:middle}
+.pr-page .psub{font:3px var(--font-ui);fill:#555;text-anchor:middle}
+.pr-page .pck{fill:none;stroke:#111;stroke-width:.3}
+.pr-page .pcl{font:600 4.4px var(--font-ui);fill:#222;text-anchor:middle}
+.pr-page .pcs{font:2.8px var(--font-ui);fill:#555;text-anchor:middle}
+.pr-page .ptile{fill:none;stroke:#999;stroke-width:.15;stroke-dasharray:1.5 1.5}
+.pr-page .pmark{stroke:#111;stroke-width:.25}
+.v3d-cell #v3d{position:absolute;inset:0;cursor:grab}
+.v3d-cell #v3d:active{cursor:grabbing}
+.reset3d{position:absolute;top:var(--space-2);right:var(--space-2);font-size:12px;min-height:0;height:var(--control-sm);padding:0 var(--space-2)}
+.v3d-size{position:absolute;left:var(--space-2);bottom:var(--space-2);font:500 11px var(--font-mono);color:var(--muted);background:var(--sheet);border:1px solid var(--rule);border-radius:var(--radius-sm);padding:2px 7px;pointer-events:none;font-variant-numeric:tabular-nums}
+.v3d-msg{position:absolute;inset:auto var(--space-4) 50% var(--space-4);text-align:center;color:var(--muted);font-size:13px;margin:0}
+.placeholder{display:flex;align-items:center;justify-content:center;border-style:dashed}
+.ph{max-width:300px;padding:var(--card-padding);display:grid;gap:var(--space-3)}
+.ph h3{margin:0;font-size:15px;font-weight:600}
+.ph p{margin:0;color:var(--muted);font-size:13px}
+.ph dl{display:grid;grid-template-columns:auto 1fr;gap:var(--space-1) var(--space-3);margin:var(--space-1) 0 0;font-size:13px}
+.ph dt{color:var(--muted)}
+.ph dd{margin:0;font-family:var(--font-mono);font-variant-numeric:tabular-nums}
+
+aside{align-self:stretch;margin:var(--space-2) var(--space-2) var(--space-2) 0;min-height:0;border:0;border-radius:var(--radius-xl);box-shadow:var(--shadow-floating);background:var(--sheet);overflow:auto;padding:var(--space-4);display:flex;flex-direction:column;gap:var(--space-4)}
+aside h2{margin:0 0 var(--space-2);font:600 11px var(--font-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);display:flex;justify-content:space-between}
+.nosel{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:var(--gap);padding:var(--space-6) var(--space-3);border:1px dashed var(--rule);border-radius:var(--radius-lg);color:var(--muted);text-align:center}
+.nosel[hidden]{display:none}
+.nosel svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-linejoin:round}
+.nosel p{margin:0;font-size:13px}
+.empty{color:var(--muted);font-size:13px;margin:0}
+.field{display:grid;gap:3px;font-size:12px;color:var(--muted)}
+.fgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--gap);margin-top:var(--space-2)}
+.fgrid .field span{font:600 11px var(--font-mono);color:var(--ink)}
+input:not([type=checkbox]):not([type=range]),select{height:var(--control-md)}
+input,select{font:inherit;color:var(--ink);background:var(--paper);border:1px solid var(--rule);box-shadow:var(--shadow-inset);border-radius:var(--radius-md);padding:5px 7px;width:100%;min-width:0}
+input[type=number]{font-family:var(--font-mono);font-variant-numeric:tabular-nums}
+.subhead{font-size:11px;color:var(--muted);margin:var(--space-3) 0 0}
+.danger{color:var(--danger)}
+.row{display:flex;gap:var(--gap);align-items:center;margin-top:var(--space-3)}
+#list{list-style:none;margin:0;padding:0;display:grid;gap:2px}
+#list button{width:100%;justify-content:space-between;padding:5px 8px}
+#list button[aria-current="true"]{background:var(--fill-sel);color:var(--accent)}
+#list .nm{font-weight:500}
+#list .tag{font:500 10px var(--font-mono);color:var(--muted);margin-left:var(--space-2);text-transform:uppercase;letter-spacing:.04em}
+#list .sz{font:12px var(--font-mono);color:var(--muted);font-variant-numeric:tabular-nums}
+.settings{display:grid;gap:var(--space-3)}
+.check{display:flex;gap:var(--gap);align-items:center;font-size:13px}
+.check input{width:auto}
+.help dl{display:grid;grid-template-columns:auto 1fr;gap:5px var(--space-3);margin:0;font-size:12.5px;color:var(--muted)}
+.help dt{text-align:right}
+
+.pop{position:fixed;z-index:20;background:var(--sheet);border:1px solid var(--rule);border-radius:var(--radius-lg);box-shadow:var(--shadow-floating);padding:var(--space-3);width:220px;display:grid;gap:var(--gap)}
+.pop[hidden]{display:none}
+.pop-title{font:600 12px var(--font-mono);color:var(--ink)}
+.pop-fields{display:grid;grid-template-columns:1fr 1fr;gap:var(--gap)}
+.pop-err{color:var(--danger);font-size:12px;min-height:0}
+.pop .row{margin:0;justify-content:flex-end}
+
+.toast{position:fixed;left:50%;bottom:var(--space-4);transform:translateX(-50%) translateY(calc(8px * var(--motion-move, 1)));background:var(--ink);color:var(--sheet);padding:var(--space-2) var(--space-4);border-radius:var(--radius-lg);font-size:13px;opacity:0;pointer-events:none;transition:opacity var(--motion-moderate-exit, 200ms) var(--ease-exit, ease),transform var(--motion-moderate-exit, 200ms) var(--ease-exit, ease);z-index:30;max-width:calc(100% - 32px)}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);transition:opacity var(--motion-moderate, 200ms) var(--ease-moderate, ease),transform var(--motion-moderate, 200ms) var(--ease-moderate, ease)}
+
+/* SVG drawing */
+.g-minor{stroke:var(--grid);stroke-width:1;fill:none}
+.g-major{stroke:var(--grid-major);stroke-width:1;fill:none}
+.g-axis{stroke:var(--axis);stroke-width:1.25;fill:none}
+.rt{font:10px var(--font-mono);fill:var(--muted)}
+.box{fill:var(--fill);stroke:var(--ink);stroke-width:1.5}
+.edge{stroke:var(--ink);stroke-width:1;opacity:.55;fill:none}
+.edge.sel{stroke:var(--accent);opacity:.7}
+.frame{fill:none;stroke:var(--accent);stroke-width:1;stroke-dasharray:3 3;opacity:.6}
+.view.editing{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+.ghost{fill:var(--accent);fill-opacity:.25;stroke:var(--accent);stroke-width:1.5;stroke-dasharray:2 2;pointer-events:none}
+.mfill{opacity:.05}
+.mfill path{fill:var(--ink);stroke:none}
+.mfill.sel{opacity:.12}
+.mfill.sel path{fill:var(--accent)}
+.mline path{fill:none;stroke:var(--ink);stroke-width:3}
+.mline.sel path{stroke:var(--accent);stroke-width:4}
+.ring{fill:none;stroke:var(--muted);stroke-width:1;stroke-dasharray:4 3;opacity:.8;pointer-events:none}
+.ring.sel{stroke:var(--accent);opacity:1}
+.split{fill:none;stroke:var(--muted);stroke-width:1.25;stroke-dasharray:7 3 1.5 3;pointer-events:none}
+.split.sel{stroke:var(--accent)}
+.split.live{stroke:var(--accent);opacity:.7}
+.hole{fill:none;stroke:var(--ink);stroke-width:1.5}
+.hole.open{fill:var(--paper)}
+.hole.hidden{stroke:var(--muted);stroke-dasharray:5 4;stroke-width:1.25}
+.hole.sel{stroke:var(--cut);stroke-width:2}
+.cut .handle,.cut .joint{stroke:var(--cut)}
+.cut .bname.hname{font-size:9.5px;font-weight:400}
+.bname.quiet{opacity:.35}
+.joint.on{fill:var(--cut)}
+.cut .dim,.cut .frame{stroke:var(--cut)}
+.cut .dimt,.cut .elen,.cut .rlab{fill:var(--cut)}
+.relrow{display:flex;align-items:center;justify-content:space-between;gap:var(--gap);margin-top:var(--space-3);padding:6px 6px 6px 10px;border:1px solid var(--rule);border-radius:var(--radius-md);font-size:12.5px}
+.relrow[hidden]{display:none}
+#list button.child{padding-left:var(--space-6)}
+.dim{opacity:.28}
+.bname.dim{opacity:.4}
+.multi-n{margin:0 0 var(--space-2);font-weight:500}
+.bool{display:grid;grid-template-columns:1fr 1fr;gap:var(--gap)}
+.bool button{justify-content:center}
+.joint.on{fill:var(--accent)}
+.rlab{font:600 10.5px var(--font-mono);fill:var(--accent);paint-order:stroke;stroke:var(--sheet);stroke-width:3px;stroke-linejoin:round}
+.corner{display:grid;grid-template-columns:72px 1fr;gap:var(--space-3);align-items:center;margin-top:var(--space-2)}
+.corner input[type=range]{padding:0;background:none;border:0;accent-color:var(--accent)}
+.joint{fill:var(--sheet);stroke:var(--accent);stroke-width:1.75}
+.elen{font:500 10.5px var(--font-mono);fill:var(--accent);text-anchor:middle;dominant-baseline:central;paint-order:stroke;stroke:var(--sheet);stroke-width:3px;stroke-linejoin:round}
+.box.sel{fill:var(--fill-sel);stroke:var(--accent);stroke-width:2}
+.bname{font:500 11px var(--font-mono);fill:var(--muted);text-anchor:middle;dominant-baseline:central;pointer-events:none}
+.stroke,.live{fill:none;stroke:var(--pencil);stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.guide{stroke:var(--accent);stroke-width:1;stroke-dasharray:4 4;fill:none}
+.handle{fill:var(--sheet);stroke:var(--accent);stroke-width:1.5}
+.dim{stroke:var(--accent);stroke-width:1;fill:none}
+.dimt{font:600 11px var(--font-mono);fill:var(--accent);paint-order:stroke;stroke:var(--sheet);stroke-width:3px;stroke-linejoin:round}
+
+
+/* floating top chrome */
+header{background:transparent;border-bottom:0;padding:var(--space-2) var(--space-2) 0;gap:var(--gap)}
+.fl{background:var(--sheet);border:0;border-radius:var(--radius-bar);box-shadow:var(--shadow-floating)}
+.fl-brand{display:flex;align-items:center;padding:var(--space-2) var(--space-2) var(--space-2) var(--space-4);align-self:stretch}
+.fl-brand .brand{margin:0}
+.tb{padding:var(--space-1);gap:2px}
+.tb button{gap:var(--space-1);padding:7px 8px}
+.tb kbd{border:0;padding:0}
+.tb button[aria-pressed="true"]{background:var(--fill-sel);border-color:transparent;box-shadow:none}
+.tb .pair{border-radius:var(--radius-lg)}
+.fl-ur{display:flex;gap:2px;padding:var(--space-1)}
+.fl-ur .btn{border-color:transparent;background:transparent;gap:var(--space-1);padding:7px 8px}
+.fl-ur kbd{border:0;padding:0}
+/* views take the full height; the top cards float over them */
+body{grid-template-rows:1fr}
+header{position:fixed;top:0;left:0;right:290px;z-index:30;pointer-events:none}
+header>*{pointer-events:auto}
+.sheet{margin:0}
+main{background:var(--sheet)}
+main>aside{margin:var(--space-3);box-shadow:var(--shadow-floating)}
+/* Drawing and Patterns are tabs; each view's own tools sit on the right */
+header>.spacer{pointer-events:none}
+.hgroup{display:flex;gap:var(--gap);align-items:stretch;margin-left:auto;pointer-events:none}
+.hgroup>*{pointer-events:auto}
+.hgroup[hidden]{display:none}
+.tabs button{padding:7px 10px}
+.tabs button[aria-pressed="true"]{color:var(--accent)}
+/* Home: no drawing open. Only the floating title stays; your drawings sit on a desktop */
+body.home main,body.home .tabs,body.home .hgroup,body.home .docwrap,body.home #unitTag,body.home .printer{display:none!important}
+body.home .brand-home,body.home .brand-home:hover:not(:disabled){cursor:default;color:var(--ink)}
+.home{position:fixed;inset:0;z-index:20;overflow:auto;background-color:var(--paper);background-image:radial-gradient(var(--grid-major) 1px,transparent 1px);background-size:18px 18px;padding:calc(var(--space-16) + var(--space-6)) var(--space-6) calc(var(--space-8) + var(--space-2))}
+.home[hidden]{display:none}
+.home-in{margin:0 auto}
+/* on Home the title pill keeps its place and height; it grows into the full pill inside a drawing */
+body.home .fl-brand{padding:0 var(--space-4)}
+.home-h{margin:0 0 var(--space-3);font:600 11px var(--font-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.home-h:not(:first-child){margin-top:var(--space-8)}
+.home-grid{display:grid;grid-template-columns:repeat(auto-fill,200px);gap:var(--space-4)}
+.hcard{position:relative;display:grid;grid-template-rows:132px auto;align-items:stretch;justify-items:stretch;align-content:start;padding:0;border:0;border-radius:var(--radius-xl);background:var(--sheet);text-align:left;overflow:hidden;white-space:normal;box-shadow:var(--shadow-raised);transition:box-shadow var(--motion-fast-exit, 150ms) var(--ease-exit, ease),transform var(--motion-fast-exit, 150ms) var(--ease-exit, ease)}
+.hcard:hover:not(:disabled){background:var(--sheet);box-shadow:0 0 0 1.5px var(--accent-line),var(--shadow-floating);transform:translateY(calc(-1px * var(--motion-move, 1)));transition:box-shadow var(--motion-fast, 150ms) var(--ease-fast, ease),transform var(--motion-fast, 150ms) var(--ease-fast, ease)}
+.hcard .th{height:132px;overflow:hidden;display:flex;align-items:center;justify-content:center;border-bottom:1px solid var(--rule);background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);background-size:12px 12px}
+.hcard .th svg{width:78%;height:78%;stroke:none}
+.hcard .th .big{width:34px;height:34px;fill:none;stroke:var(--accent)}
+.hcard .tp{fill:var(--fill-sel);stroke:var(--ink);stroke-width:1.5;vector-effect:non-scaling-stroke}
+.hcard .th2{fill:var(--sheet);stroke:var(--ink);stroke-width:1;vector-effect:non-scaling-stroke}
+.hcard .ts{fill:none;stroke:var(--pencil);stroke-width:1.5;vector-effect:non-scaling-stroke;stroke-linecap:round;stroke-linejoin:round}
+.hcard .meta{display:grid;gap:2px;padding:var(--space-3) var(--space-3) var(--space-3)}
+.hcard .nm{font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hcard .when{font-size:12px;color:var(--muted)}
+.hcard .hx{position:absolute;top:var(--space-2);right:var(--space-2);width:var(--control-xs);height:var(--control-xs);padding:0;justify-content:center;border-radius:var(--radius-md);background:var(--sheet);color:var(--muted);opacity:0;box-shadow:var(--shadow-raised)}
+.hcard:hover .hx,.hcard .hx:focus-visible{opacity:1}
+.home-empty{margin:0;color:var(--muted);font-size:13px}
+main.fading,main.fading~.printer{opacity:0;transition:opacity var(--motion-slow-exit, 250ms) var(--ease-exit, ease)}
+.home:not([hidden]){animation:fadein var(--motion-slow, 300ms) var(--ease-slow, ease)}
+main.entering{animation:fadein var(--motion-slow, 300ms) var(--ease-slow, ease)}
+@keyframes fadein{from{opacity:0}to{opacity:1}}
+/* every floating bar is --bar tall with the same --inset; controls inside are --control-md */
+header .fl{height:var(--bar);box-sizing:border-box;align-items:center}
+header .fl-brand{align-self:auto;padding:0 var(--space-2) 0 var(--space-4)}
+header .tb,header .fl-ur{padding:var(--inset);align-items:center}
+header .tb>button,header .fl-ur>button,header .tb .pair{height:var(--control-md);box-sizing:border-box}
+header .tb .pair>button{height:100%}
+header .tb .dd{height:var(--control-md)}
+body.pat header{position:fixed;top:0;left:0;right:0;z-index:45;pointer-events:none}
+.sheet>.view:nth-of-type(1) .vlabel,.sheet>.view:nth-of-type(2) .vlabel{top:calc(var(--it,0px) + var(--space-2))}
+@media (max-width:860px){
+  header{position:static;pointer-events:auto}
+  body{overflow:auto;grid-template-rows:auto auto}
+  main{grid-template-columns:1fr}
+  .sheet{height:78vh}
+  aside{position:static;width:auto;max-height:none;border-radius:0;box-shadow:none;border-top:1px solid var(--rule)}
+  kbd{display:none}
+}
+</style>
+</head>
+<body>
+<header>
+  <div class="fl fl-brand">
+  <div class="brand"><button id="homeBtn" class="brand-home" title="Home: your drawings"><img class="brand-logo brand-light" src="brand/logo.svg" alt="Cast"><img class="brand-logo brand-dark" src="brand/logo-dark.svg" alt="Cast"></button><span class="docwrap"><span class="docsep" aria-hidden="true">/</span><span class="docname" id="docName" contenteditable="plaintext-only" spellcheck="false" role="textbox" aria-label="Drawing name" title="Click to rename"></span><span class="docdot" id="docDot" hidden title="Changes not saved to a file yet"></span></span><button id="unitTag" class="unit-tag" title="Units and settings" aria-haspopup="true" aria-expanded="false"><span class="u">mm</span><svg class="lucide lucide-chevron-down" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button>
+    <div class="menu settings" id="settingsMenu" hidden role="dialog" aria-label="Settings">
+      <section class="msec" aria-labelledby="mFile">
+        <h3 id="mFile">File</h3>
+        <div class="filestack">
+          <button id="openDrawing" class="btn" title="Open a drawing file you saved">Open…</button>
+          <button id="saveDrawing" class="btn" title="Save this drawing as a file (Ctrl/⌘ S)">Save</button>
+          <button id="prSave" class="btn" title="Download the slabs to cut as a PDF, 1:1">Download pattern</button>
+        </div>
+        <input id="openFile" type="file" accept=".json,application/json" hidden>
+      </section>
+      <section class="msec" aria-labelledby="mDraw">
+        <h3 id="mDraw">Canvas</h3>
+        <div class="field">Units<div class="seg mode" role="group" aria-label="Units"><button id="unitMM">mm</button><button id="unitCM">cm</button></div></div>
+        <label class="field" for="defDepth"><span>Hidden depth for new pieces (<span class="u">mm</span>)</span><input id="defDepth" type="number" min="1" step="1"></label>
+        <label class="field" for="gridSel">Snap grid
+          <select id="gridSel"><option value="1">1 mm</option><option value="5">5 mm</option><option value="10">10 mm</option></select>
+        </label>
+        <label class="check" for="snapChk"><input id="snapChk" type="checkbox"> Snap to grid and to other edges</label>
+      </section>
+      <section class="msec" aria-labelledby="mPat">
+        <h3 id="mPat">Print</h3>
+        <label class="field" for="prPaper">Paper<select id="prPaper"><option value="a4">A4</option><option value="letter">US Letter</option></select></label>
+        <label class="field" for="prGrow"><span>Shape grow (%)</span><input id="prGrow" type="number" min="0" max="50" step="1" title="Clay shrinks as it dries and fires. Pieces are printed this much bigger so the finished piece matches your drawing."></label>
+        <label class="field" for="prLine"><span>Line weight (pt)</span><input id="prLine" type="number" min="0.25" max="2" step="0.25" title="How thick the cut and fold lines print, in points (as in Illustrator). 0.5 pt is fine and crisp; up to 2 pt."></label>
+      </section>
+    </div>
+  </div>
+  </div>
+  <div class="seg tb fl tabs" role="tablist" aria-label="Views">
+    <button id="tabDraw" role="tab" aria-selected="true" aria-pressed="true" title="Draw and shape the piece"><svg class="lucide lucide-pencil" viewBox="0 0 24 24" aria-hidden="true"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/></svg>Drawing</button>
+    <button id="printBtn" role="tab" aria-selected="false" aria-pressed="false" title="The slabs to cut, ready to print"><svg class="lucide lucide-file-text" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"/><path d="M14 2v5a1 1 0 0 0 1 1h5"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></svg>Patterns</button>
+  </div>
+  <div class="spacer"></div>
+  <div class="hgroup" id="drawCtl">
+    <div class="seg tb fl" role="toolbar" aria-label="Tools">
+      <div class="pair">
+      <button data-tool="pencil" aria-label="Pencil" title="Pencil (P)"><svg class="lucide lucide-pencil" viewBox="0 0 24 24" aria-hidden="true"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/></svg><kbd>P</kbd></button>
+      <button id="cleanBtn" aria-label="Clean" title="Clean: straighten pencil strokes into shapes (C)"><svg class="lucide lucide-wand-sparkles" viewBox="0 0 24 24" aria-hidden="true"><path d="m21.64 3.64-1.28-1.28a1.21 1.21 0 0 0-1.72 0L2.36 18.64a1.21 1.21 0 0 0 0 1.72l1.28 1.28a1.2 1.2 0 0 0 1.72 0L21.64 5.36a1.2 1.2 0 0 0 0-1.72"/><path d="m14 7 3 3"/><path d="M5 6v4"/><path d="M19 14v4"/><path d="M10 2v2"/><path d="M7 8H3"/><path d="M21 16h-4"/><path d="M11 3H9"/></svg><kbd>C</kbd><span class="count" id="strokeCount" hidden>0</span></button>
+      </div>
+      <button data-tool="select" aria-label="Select" title="Select and move (V)"><svg class="lucide lucide-mouse-pointer-2" viewBox="0 0 24 24" aria-hidden="true"><path d="M4.037 4.688a.495.495 0 0 1 .651-.651l16 6.5a.5.5 0 0 1-.063.947l-6.124 1.58a2 2 0 0 0-1.438 1.435l-1.579 6.126a.5.5 0 0 1-.947.063z"/></svg><kbd>V</kbd></button>
+      <button data-tool="measure" aria-label="Measure" title="Measure: click a piece to type its size (M)"><svg class="lucide lucide-ruler" viewBox="0 0 24 24" aria-hidden="true"><path d="M21.3 15.3a2.4 2.4 0 0 1 0 3.4l-2.6 2.6a2.4 2.4 0 0 1-3.4 0L2.7 8.7a2.41 2.41 0 0 1 0-3.4l2.6-2.6a2.41 2.41 0 0 1 3.4 0Z"/><path d="m14.5 12.5 2-2"/><path d="m11.5 9.5 2-2"/><path d="m8.5 6.5 2-2"/><path d="m17.5 15.5 2-2"/></svg><kbd>M</kbd></button>
+      <button data-tool="split" aria-label="Split" title="Split: drag across a shape for a line you can move (S)"><svg class="lucide lucide-square-split-horizontal" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2v20"/><path d="M16 3h3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-3"/><path d="M8 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3"/></svg><kbd>S</kbd></button>
+      <button id="addBtn" title="Box: add a 10 cm cube (B)" aria-label="Box"><svg class="lucide lucide-box" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg><kbd>B</kbd></button>
+      <div class="dd"><div class="pair">
+      <button data-tool="eraser" aria-label="Eraser" title="Eraser (E)"><svg class="lucide lucide-eraser" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 21H8a2 2 0 0 1-1.42-.587l-3.994-3.999a2 2 0 0 1 0-2.828l10-10a2 2 0 0 1 2.829 0l5.999 6a2 2 0 0 1 0 2.828L12.834 21"/><path d="m5.082 11.09 8.828 8.828"/></svg><kbd>E</kbd></button>
+      <button id="eraseMore" class="caret" title="More eraser actions" aria-label="More eraser actions" aria-haspopup="true" aria-expanded="false"><svg class="lucide lucide-chevron-down" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button>
+      </div>
+      <div class="menu mini" id="eraseMenu" hidden role="menu" aria-label="Eraser actions">
+        <button id="clearBtn" class="danger" role="menuitem" title="Remove all pieces and strokes">Clear all</button>
+      </div></div>
+    </div>
+    <div class="fl fl-ur">
+      <button id="fitBtn" class="btn" title="Fit everything in view (F)" aria-label="Fit"><svg class="lucide lucide-maximize" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg><kbd>F</kbd></button>
+    </div>
+  </div>
+  <div class="hgroup" id="patCtl" hidden>
+      <div class="seg tb fl" role="toolbar" aria-label="Arrange pieces">
+        <button id="prRotate" title="Turn the selected piece a quarter turn (R). Drag the round handle above a piece to turn it freely; it snaps every 45° (hold Alt to turn without snapping)" disabled><svg class="lucide lucide-rotate-cw" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></svg>Rotate</button>
+        <label class="pr-ang" title="Angle of the selected piece, in degrees"><input id="prAng" type="number" step="1" disabled aria-label="Angle in degrees"><span>°</span></label>
+        <button id="prFlipH" title="Flip the selected piece left to right" aria-label="Flip horizontally" disabled><svg class="lucide lucide-flip-vertical-2" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 14v2"/><path d="M12 20v2"/><path d="M12 2v2"/><path d="M12 8v2"/><path d="M20.288 16.703A1 1 0 0 0 22 16V8a1 1 0 0 0-1.712-.703l-3.99 3.991a1 1 0 0 0-.001 1.424z"/><path d="M3.712 16.703A1 1 0 0 1 2 16V8a1 1 0 0 1 1.712-.703l3.99 3.991a1 1 0 0 1 .001 1.424z"/></svg></button>
+        <button id="prFlipV" title="Flip the selected piece top to bottom" aria-label="Flip vertically" disabled><svg class="lucide lucide-flip-horizontal-2" viewBox="0 0 24 24" aria-hidden="true"><path d="M10 12H8"/><path d="M16 12h-2"/><path d="M22 12h-2"/><path d="M4 12H2"/><path d="M7.298 20.288A1 1 0 0 0 8 22h8a1 1 0 0 0 .703-1.712l-3.991-3.99a1 1 0 0 0-1.424-.001z"/><path d="M7.298 3.712A1 1 0 0 1 8 2h8a1 1 0 0 1 .703 1.712l-3.991 3.99a1 1 0 0 1-1.424.001z"/></svg></button>
+        <button id="prAddPage" title="Add an empty page to place pieces on"><svg class="lucide lucide-file-plus" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"/><path d="M14 2v5a1 1 0 0 0 1 1h5"/><path d="M9 15h6"/><path d="M12 18v-6"/></svg>Page</button>
+        <button id="prArrange" title="Forget your arrangement and pack the pieces again"><svg class="lucide lucide-layout-grid" viewBox="0 0 24 24" aria-hidden="true"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>Arrange</button>
+      </div>
+  </div>
+</header>
+
+<main>
+  <section class="sheet" aria-label="Cast views">
+    <div class="view"><svg id="v-front" aria-label="Front view"></svg><div class="vlabel">Front<span>W × H</span></div></div>
+    <div class="view"><svg id="v-side" aria-label="Right side view"></svg><div class="vlabel">Right side<span>D × H</span></div>
+      <div class="chip" id="exChip" hidden>Example sketch: a stool seen from the side. Press <b>Clean</b> to straighten it into shapes.</div>
+    </div>
+    <div class="view"><svg id="v-top" aria-label="Top view"></svg><div class="vlabel">Top<span>W × D</span></div></div>
+    <div class="view v3d-cell">
+      <div id="v3d" aria-label="3D preview: drag to rotate, scroll to zoom, right-drag to pan"></div>
+      <div class="vlabel">3D</div>
+      <button id="reset3d" class="btn reset3d" title="Fit the object in the 3D view">Reset view</button>
+      <div class="v3d-size"><span id="pSize">–</span><span id="pCount" hidden>0</span></div>
+      <p class="v3d-msg" id="v3dMsg" hidden>The 3D preview couldn't load here. The three views still work.</p>
+    </div>
+  </section>
+
+  <aside>
+    <section>
+      <h2>Selection</h2>
+      <div class="nosel" id="noSel"><svg class="lucide lucide-mouse-pointer-2" viewBox="0 0 24 24" aria-hidden="true"><path d="M4.037 4.688a.495.495 0 0 1 .651-.651l16 6.5a.5.5 0 0 1-.063.947l-6.124 1.58a2 2 0 0 0-1.438 1.435l-1.579 6.126a.5.5 0 0 1-.947.063z"/></svg><p>Pick or draw a shape</p></div>
+      <div id="multiBox" hidden>
+        <p class="multi-n" id="multiN"></p>
+        <div class="bool">
+          <button id="cutBtn" class="btn" title="The biggest piece keeps its shape; the others become holes in it"><svg class="lucide lucide-squares-subtract" viewBox="0 0 24 24" aria-hidden="true"><path d="M10 22a2 2 0 0 1-2-2"/><path d="M16 22h-2"/><path d="M16 4a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h3a1 1 0 0 0 1-1v-5a2 2 0 0 1 2-2h5a1 1 0 0 0 1-1z"/><path d="M20 8a2 2 0 0 1 2 2"/><path d="M22 14v2"/><path d="M22 20a2 2 0 0 1-2 2"/></svg>Cut</button>
+          <button id="mergeBtn" class="btn" title="Join the pieces into one shape"><svg class="lucide lucide-squares-unite" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 16a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v3a1 1 0 0 0 1 1h3a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H10a2 2 0 0 1-2-2v-3a1 1 0 0 0-1-1z"/></svg>Merge</button>
+        </div>
+        <p class="subhead">Shift+click to add or remove pieces.</p>
+      </div>
+      <div id="selFields" hidden>
+        <label class="field" for="f-name">Name<input id="f-name" type="text" maxlength="24"></label>
+        <div class="relrow" id="relRow" hidden><span id="relText"></span><button id="relBtn" class="btn">Release</button></div>
+        <p class="subhead">Edit mode</p>
+        <div class="seg mode" role="group" aria-label="Edit mode"><button id="modeResize" title="Stretch the shape by its box">Resize</button><button id="modeJoints" title="Move individual joints (Enter)">Joints<kbd>↵</kbd></button></div>
+        <div id="cornerBox" hidden>
+          <p class="subhead">Corner radius (<span class="u">mm</span>) · <span id="jointNo"></span></p>
+          <div class="corner"><input id="f-rad" type="number" min="0" step="1" aria-label="Corner radius"><input id="f-radr" type="range" min="0" max="100" step="1" aria-label="Corner radius slider"></div>
+          <div class="row"><button id="radAll" class="btn">Round all corners</button><button id="radNone" class="btn">Remove rounding</button></div>
+        </div>
+        <p class="subhead">Size (<span class="u">mm</span>)</p>
+        <div class="fgrid">
+          <label class="field" for="f-w"><span>W</span><input id="f-w" type="number" min="1" step="1"></label>
+          <label class="field" for="f-h"><span>H</span><input id="f-h" type="number" min="1" step="1"></label>
+          <label class="field" for="f-d"><span>D</span><input id="f-d" type="number" min="1" step="1"></label>
+        </div>
+        <p class="subhead">Position (<span class="u">mm</span>)</p>
+        <div class="fgrid">
+          <label class="field" for="f-x"><span>X</span><input id="f-x" type="number" step="1"></label>
+          <label class="field" for="f-y"><span>Y</span><input id="f-y" type="number" step="1"></label>
+          <label class="field" for="f-z"><span>Z</span><input id="f-z" type="number" step="1"></label>
+        </div>
+        <div class="row"><button id="delBtn" class="btn danger">Delete piece</button></div>
+      </div>
+    </section>
+
+    <section>
+      <h2>Pieces <span id="count">0</span></h2>
+      <ul id="list"></ul>
+      <p class="empty" id="listEmpty">No pieces yet. Sketch with the pencil, then press Clean.</p>
+    </section>
+
+
+  </aside>
+</main>
+
+<div class="pop" id="pop" hidden role="dialog" aria-label="Edit size">
+  <div class="pop-title" id="popTitle"></div>
+  <div class="pop-fields">
+    <label class="field" for="popA" id="popFA"><span id="popLA">W</span><input id="popA" type="number" min="1" step="1"></label>
+    <label class="field" for="popB" id="popFB"><span id="popLB">H</span><input id="popB" type="number" min="1" step="1"></label>
+  </div>
+  <div class="pop-err" id="popErr"></div>
+  <div class="row"><button class="btn" id="popCancel">Cancel</button><button class="primary" id="popOk">Apply</button></div>
+</div>
+<div class="printer" id="printer" hidden role="region" aria-label="Patterns">
+  <div class="pr-pages" id="prPages"></div>
+</div>
+<div class="modal" id="askSave" hidden role="dialog" aria-modal="true" aria-labelledby="askTitle">
+  <div class="modal-card">
+    <button class="modal-x" id="askCancel" title="Keep editing (Esc)" aria-label="Keep editing"><svg class="lucide lucide-x" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
+    <h2 id="askTitle">Save changes?</h2>
+    <p id="askText"></p>
+    <div class="row"><button class="btn" id="askNo">Discard</button><button class="primary" id="askYes">Save</button></div>
+  </div>
+</div>
+<section class="home" id="home" hidden aria-label="Your drawings">
+  <div class="home-in">
+    <h2 class="home-h">Start</h2>
+    <div class="home-grid" id="homeStart"></div>
+    <h2 class="home-h">Recent</h2>
+    <div class="home-grid" id="homeRecent"></div>
+    <p class="home-empty" id="homeEmpty" hidden>Drawings you open or save show up here.</p>
+  </div>
+</section>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(function(){
+"use strict";
+const $=s=>document.querySelector(s);
+
+/* Each view shows two model axes; the vertical screen axis always points "up" in model space.
+   A piece has a size box (r) and, optionally, an outline in any view (out[view]).
+   The solid is what all its outlines share: each outline is pushed through the box like a cookie cutter.
+   A view without an outline shows the plain box. */
+const VIEWS={
+  top:  {h:'x',v:'z',oh:'x',    ov:'zTop',name:'Top'},
+  front:{h:'x',v:'y',oh:'x',    ov:'y',   name:'Front'},
+  side: {h:'z',v:'y',oh:'zSide',ov:'y',   name:'Side'}
+};
+const ORDER=['front','side','top'];
+const SIZE_OF={x:'w',y:'h',z:'d'};
+const LABEL={x:'W',y:'H',z:'D'};
+const KEY='paper3d.blueprint.v3',V2_KEY='paper3d.blueprint.v2',V1_KEY='paper3d.blueprint.v1';
+const svgs={};ORDER.forEach(k=>svgs[k]=document.getElementById('v-'+k));
+
+let st={pieces:[],strokes:[],defDepth:100,grid:5,snap:true,example:false,unit:'mm',slab:6,paper:'a4',docName:null,cleanSig:null,home:false};
+const ui={tool:'pencil',sel:null,editJoints:false,jointView:null,ghost:null,joint:null,multi:[],inside:null,s:1,o:{x:60,y:300,zSide:60,zTop:300},guides:[]};
+let hist=[],redoStack=[],drag=null,spaceDown=false,idSeq=1;
+
+const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
+const r1=v=>Math.round(v*10)/10;
+const fmt=v=>{const n=r1(v);return String(Object.is(n,-0)?0:n);};
+/* display units: everything is stored in mm, shown and typed in mm or cm */
+const UF=()=>st.unit==='cm'?10:1;
+const UN=()=>st.unit==='cm'?'cm':'mm';
+const fmtU=v=>{const n=st.unit==='cm'?Math.round(v/10*100)/100:r1(v);return String(Object.is(n,-0)?0:n);};
+const inU=v=>v*UF();
+const eq=(a,b)=>Math.abs(a-b)<0.05;
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const clone=o=>JSON.parse(JSON.stringify(o));
+const getP=id=>st.pieces.find(p=>p.id===id);
+const newId=()=>'p'+Date.now().toString(36)+(idSeq++);
+function nextName(){
+  const used=new Set(st.pieces.map(p=>p.name));
+  for(let i=0;;i++){let n='',k=i;do{n=String.fromCharCode(65+k%26)+n;k=Math.floor(k/26)-1;}while(k>=0);if(!used.has(n))return n;}
+}
+
+/* ---------- piece geometry ---------- */
+function axIx(vk,axis){const V=VIEWS[vk];return axis===V.h?0:axis===V.v?1:-1;}
+const range=(p,axis)=>p.r[axis];
+function rectPts(p,vk){const V=VIEWS[vk];const [a1,a2]=p.r[V.h],[b1,b2]=p.r[V.v];return [[a1,b1],[a2,b1],[a2,b2],[a1,b2]];}
+const outline=(p,vk)=>p.out[vk]||rectPts(p,vk);
+const shaped=p=>ORDER.filter(vk=>p.out[vk]);
+function shift(p,axis,d){
+  p.r[axis]=[r1(p.r[axis][0]+d),r1(p.r[axis][1]+d)];
+  for(const vk of shaped(p)){const k=axIx(vk,axis);if(k>=0)p.out[vk].forEach(q=>{q[k]=r1(q[k]+d);});}
+  for(const sl of p.splits||[])if(sl.axis===axis)sl.val=r1(sl.val+d);
+}
+/* stretching an axis stretches every outline that uses it, so all views stay in sync */
+function setRange(p,axis,lo,hi,skipView){
+  if(hi-lo<1)hi=lo+1;
+  const [a,b]=p.r[axis],s=(b-a)>1e-9?(hi-lo)/(b-a):1;
+  for(const vk of shaped(p)){if(vk===skipView)continue;const k=axIx(vk,axis);if(k>=0)p.out[vk].forEach(q=>{q[k]=r1(lo+(q[k]-a)*s);});}
+  for(const sl of p.splits||[])if(sl.axis===axis)sl.val=r1(lo+(sl.val-a)*s);
+  p.r[axis]=[r1(lo),r1(hi)];
+}
+/* after joints move in one view, that outline's extent becomes the piece's size on its two axes */
+function syncFrom(p,vk){
+  const P=p.out[vk];if(!P)return;
+  for(const k of [0,1]){
+    const axis=k?VIEWS[vk].v:VIEWS[vk].h;let lo=Infinity,hi=-Infinity;
+    for(const q of P){lo=Math.min(lo,q[k]);hi=Math.max(hi,q[k]);}
+    if(!eq(lo,p.r[axis][0])||!eq(hi,p.r[axis][1]))setRange(p,axis,lo,hi,vk);
+  }
+}
+function isPlainBox(p,vk){const P=p.out[vk];if(!P||P.length!==4||P.some(q=>q[2]>0))return false;const R=rectPts(p,vk);return P.every(q=>R.some(c=>eq(c[0],q[0])&&eq(c[1],q[1])));}
+function tidy(p){for(const vk of ORDER)if(isPlainBox(p,vk))delete p.out[vk];}
+function bboxOf(P){let a1=Infinity,b1=Infinity,a2=-Infinity,b2=-Infinity;for(const q of P){a1=Math.min(a1,q[0]);a2=Math.max(a2,q[0]);b1=Math.min(b1,q[1]);b2=Math.max(b2,q[1]);}return [a1,b1,a2,b2];}
+function polyArea(P){let a=0;for(let i=0;i<P.length;i++){const p=P[i],q=P[(i+1)%P.length];a+=p[0]*q[1]-q[0]*p[1];}return a/2;}
+function inPoly(x,y,P){let ins=false;for(let i=0,j=P.length-1;i<P.length;j=i++){const xi=P[i][0],yi=P[i][1],xj=P[j][0],yj=P[j][1];if(((yi>y)!==(yj>y))&&(x<(xj-xi)*(y-yi)/(yj-yi)+xi))ins=!ins;}return ins;}
+function segDist(px,py,ax,ay,bx,by){const dx=bx-ax,dy=by-ay,L=dx*dx+dy*dy;let t=L?((px-ax)*dx+(py-ay)*dy)/L:0;t=clamp(t,0,1);return Math.hypot(px-(ax+t*dx),py-(ay+t*dy));}
+function polyDist(p,pts){if(pts.length===1)return Math.hypot(p[0]-pts[0][0],p[1]-pts[0][1]);let d=Infinity;for(let i=0;i<pts.length-1;i++)d=Math.min(d,segDist(p[0],p[1],pts[i][0],pts[i][1],pts[i+1][0],pts[i+1][1]));return d;}
+function centroid(P){let a=0,cx=0,cy=0;for(let i=0;i<P.length;i++){const p=P[i],q=P[(i+1)%P.length],c=p[0]*q[1]-q[0]*p[1];a+=c;cx+=(p[0]+q[0])*c;cy+=(p[1]+q[1])*c;}if(Math.abs(a)<1e-9)return P[0];return [cx/(3*a),cy/(3*a)];}
+/* the point deepest inside an outline, so a name never lands on an edge */
+function labelPoint(P,cuts){
+  const [a1,b1,a2,b2]=bboxOf(P),rings=[P.concat([P[0]])].concat((cuts||[]).map(C=>C.concat([C[0]])));let best=centroid(P),bd=-1;
+  for(let i=1;i<12;i++)for(let j=1;j<12;j++){
+    const x=a1+(a2-a1)*i/12,y=b1+(b2-b1)*j/12;
+    if(!inPoly(x,y,P)||(cuts||[]).some(C=>inPoly(x,y,C)))continue;
+    const d=Math.min(...rings.map(R=>polyDist([x,y],R)));if(d>bd){bd=d;best=[x,y];}
+  }
+  return best;
+}
+
+/* ---------- cut & merge ----------
+   A cut piece keeps cutOf = the piece it cuts; merged pieces share a mergeId. Both stay normal, editable pieces. */
+const isSel=p=>p.id===ui.sel||ui.multi.includes(p.id);
+const cuttersOf=p=>st.pieces.filter(c=>c.cutOf===p.id);
+const vol=p=>['x','y','z'].reduce((a,k)=>a*Math.max(0,p.r[k][1]-p.r[k][0]),1);
+function overlap3(a,b,e){return ['x','y','z'].every(k=>a.r[k][0]<b.r[k][1]+e&&b.r[k][0]<a.r[k][1]+e);}
+/* a hole fully outside its piece, or whose piece is gone, becomes a regular piece; merged parts that stop touching separate */
+function reconcile(){
+  const out=[];
+  for(const c of st.pieces){
+    if(!c.cutOf)continue;
+    const b=getP(c.cutOf);
+    if(!b||b.cutOf||!overlap3(c,b,-0.05)){delete c.cutOf;out.push(c.name);}
+  }
+  for(const g of [...new Set(st.pieces.filter(p=>p.mergeId).map(p=>p.mergeId))]){
+    const M=st.pieces.filter(p=>p.mergeId===g&&!p.cutOf),seed=M.reduce((a,b)=>vol(b)>vol(a)?b:a,M[0]);
+    const keep=new Set(seed?[seed.id]:[]);let grew=true;
+    while(grew){grew=false;for(const m of M){if(keep.has(m.id))continue;if(M.some(o=>keep.has(o.id)&&overlap3(m,o,0.5))){keep.add(m.id);grew=true;}}}
+    for(const p of st.pieces.filter(p=>p.mergeId===g))if(!keep.has(p.id)){delete p.mergeId;out.push(p.name);}
+    if(keep.size<2&&seed)delete seed.mergeId;
+  }
+  return out;
+}
+function holeName(b){const used=new Set(st.pieces.map(p=>p.name));for(let i=1;;i++){const n=`${b.name}.h${i}`;if(!used.has(n))return n;}}
+function fixNames(){
+  const renamed=[];
+  for(const p of st.pieces){
+    if(p.cutOf){const b=getP(p.cutOf);if(b&&!new RegExp('^'+b.name.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'\\.h\\d+$').test(p.name)){const o=p.name;p.name=holeName(b);renamed.push([o,p.name]);}}
+    else if(/\.h\d+$/.test(p.name)){const o=p.name;p.name=nextName();renamed.push([o,p.name]);}
+  }
+  return renamed;
+}
+function commit(){
+  const rel=reconcile(),ren=fixNames();save();
+  if(rel.length){const nm=n=>{const r=ren.find(x=>x[0]===n);return r?`${n} (now ${r[1]})`:n;};toast(`${rel.map(nm).join(', ')} ${rel.length>1?'are':'is'} a separate piece again.`);}
+}
+
+/* ---------- history & storage ---------- */
+/* a snapshot also carries which drawing it belongs to, so undo after New or Open brings the old one back whole */
+const snap=()=>JSON.stringify({pieces:st.pieces,strokes:st.strokes,example:st.example,doc:{name:st.docName,clean:st.cleanSig,layout:st.printLayout,pages:st.printPages}});
+function pushHist(s){hist.push(s);if(hist.length>150)hist.shift();redoStack=[];}
+function restore(s){const o=JSON.parse(s);st.pieces=o.pieces;st.strokes=o.strokes;st.example=o.example;if(o.doc){st.docName=o.doc.name;st.cleanSig=o.doc.clean;st.printLayout=o.doc.layout;st.printPages=o.doc.pages;}if(!getP(ui.inside))ui.inside=null;if(!getP(ui.sel)){ui.sel=null;ui.editJoints=false;}ui.joint=null;ui.multi=ui.multi.filter(id=>getP(id));if(ui.multi.length<2)ui.multi=[];}
+function undo(){if(!hist.length)return;redoStack.push(snap());restore(hist.pop());save();render();}
+function redo(){if(!redoStack.length)return;hist.push(snap());restore(redoStack.pop());save();render();}
+/* the smallest measure is 1 mm: every joint, edge, size and corner radius is kept at a whole millimetre */
+function roundModel(){
+  for(const p of st.pieces){
+    for(const a of ['x','y','z']){const lo=Math.round(p.r[a][0]);let hi=Math.round(p.r[a][1]);if(hi<=lo)hi=lo+1;p.r[a]=[lo,hi];}
+    for(const vk of Object.keys(p.out||{})){
+      let P=p.out[vk].map(q=>{const n=[Math.round(q[0]),Math.round(q[1])];const r=q[2]>0?Math.round(q[2]):0;if(r>0)n.push(r);return n;});
+      P=P.filter((q,i)=>{const n=P[(i+1)%P.length];return !(q[0]===n[0]&&q[1]===n[1]);});
+      if(P.length>=3)p.out[vk]=P;
+    }
+    if(p.splits){
+      p.splits=p.splits.map(sl=>({axis:sl.axis,val:Math.round(sl.val)})).filter((sl,i,A)=>sl.val>p.r[sl.axis][0]&&sl.val<p.r[sl.axis][1]&&A.findIndex(o=>o.axis===sl.axis&&o.val===sl.val)===i);
+      if(!p.splits.length)delete p.splits;
+    }
+  }
+}
+function save(){roundModel();try{localStorage.setItem(KEY,JSON.stringify(st));}catch(e){}showDoc();}
+/* the open drawing: its name next to the title, and whether it has changes not yet saved to a file */
+/* what counts as a change worth saving: the shapes, the sketch, the name, and the Patterns pages
+   (where pieces sit and how they're turned, pages added, paper and grow) */
+const drawSig=()=>JSON.stringify([st.pieces,st.strokes,st.docName||null,st.printLayout||{},st.printPages||0,st.paper||'a4',st.grow==null?15:st.grow,st.lineWt||0.5]);
+const isDirty=()=>!st.example&&(st.pieces.length||st.strokes.length)&&drawSig()!==st.cleanSig;
+function showDoc(){
+  const el=document.getElementById('docName');if(!el)return;
+  const d=isDirty();$('#docDot').hidden=!d;
+  if(document.activeElement===el)return;
+  el.textContent=st.docName||'New drawing';
+}
+/* rename in place */
+(()=>{
+  const el=document.getElementById('docName');
+  let typed=false;
+  const selectAll=()=>{const r=document.createRange();r.selectNodeContents(el);const sel=getSelection();sel.removeAllRanges();sel.addRange(r);};
+  el.addEventListener('focus',()=>{
+    if(!st.docName)el.textContent='';
+    typed=false;selectAll();
+    /* the click that focused it places a caret afterwards: select the whole name again, unless typing already started */
+    requestAnimationFrame(()=>{if(!typed&&document.activeElement===el)selectAll();});
+  });
+  el.addEventListener('input',()=>{typed=true;});
+  el.addEventListener('keydown',e=>{
+    if(e.key==='Enter'){e.preventDefault();el.blur();}
+    else if(e.key==='Escape'){e.preventDefault();e.stopPropagation();el.textContent=st.docName||'';el.blur();}
+  });
+  el.addEventListener('blur',()=>{
+    const v=el.textContent.replace(/\s+/g,' ').trim().slice(0,60);
+    if(v&&v!==st.docName){st.docName=v;save();toast(`Renamed to ${v}. Save to download it under this name.`);}
+    el.scrollLeft=0;showDoc();
+  });
+  el.addEventListener('paste',e=>{e.preventDefault();const t=(e.clipboardData||window.clipboardData).getData('text').replace(/\s+/g,' ');document.execCommand('insertText',false,t);});
+})();function fromV2(p){
+  const V=VIEWS[p.view],ext={front:'z',side:'x',top:'y'}[p.view],[a1,b1,a2,b2]=bboxOf(p.pts);
+  const r={};r[V.h]=[a1,a2];r[V.v]=[b1,b2];r[ext]=[p.e0,p.e1];
+  const q={id:p.id,name:p.name,r,out:{[p.view]:p.pts}};tidy(q);return q;
+}
+function fromV1(b){return {id:b.id||newId(),name:b.name,r:{x:[b.x,b.x+b.w],y:[b.y,b.y+b.h],z:[b.z,b.z+b.d]},out:{}};}
+function migrateHoles(){
+  for(const h of st.pieces){
+    if(!h.hole)continue;delete h.hole;
+    const host=st.pieces.filter(p=>p!==h&&!p.hole&&!p.cutOf&&overlap3(p,h,-0.05)).sort((a,b)=>vol(b)-vol(a))[0];
+    if(host)h.cutOf=host.id;
+  }
+}
+function load(){
+  try{
+    const raw=localStorage.getItem(KEY);
+    if(raw){const o=JSON.parse(raw);if(o&&Array.isArray(o.pieces)&&Array.isArray(o.strokes)){st=Object.assign(st,o);migrateHoles();fixNames();roundModel();return true;}}
+    const v2=localStorage.getItem(V2_KEY);
+    if(v2){const o=JSON.parse(v2);if(o&&Array.isArray(o.pieces)){st=Object.assign(st,o,{pieces:o.pieces.map(fromV2)});return true;}}
+    const v1=localStorage.getItem(V1_KEY);
+    if(v1){const o=JSON.parse(v1);if(o&&Array.isArray(o.boxes)){st=Object.assign(st,{pieces:o.boxes.map(fromV1),strokes:o.strokes||[],defDepth:o.defDepth||100,grid:o.grid||5,snap:o.snap!==false,example:false});return true;}}
+  }catch(e){}
+  return false;
+}
+
+/* ---------- view transforms ---------- */
+function dims(vk){const r=svgs[vk].getBoundingClientRect();return {w:r.width,h:r.height};}
+function scr(vk,a,b){const V=VIEWS[vk];return [ui.o[V.oh]+a*ui.s,ui.o[V.ov]-b*ui.s];}
+function mdl(vk,u,v){const V=VIEWS[vk];return [(u-ui.o[V.oh])/ui.s,(ui.o[V.ov]-v)/ui.s];}
+function rectOf(vk,p){const V=VIEWS[vk];const [a1,a2]=p.r[V.h],[b1,b2]=p.r[V.v];const q=scr(vk,a1,b1),w=scr(vk,a2,b2);return {u1:q[0],v2:q[1],u2:w[0],v1:w[1]};}
+/* what each view looks into: the depth axis, and whether the face nearest the viewer is that axis' high end */
+const DEPTH={front:['z',false],side:['x',true],top:['y',true]};
+function overlapIn(vk,a,b){const V=VIEWS[vk];return [V.h,V.v].every(ax=>a.r[ax][0]<b.r[ax][1]-0.05&&b.r[ax][0]<a.r[ax][1]-0.05);}
+/* through: runs the full depth of the piece. open: a pocket in the face you're looking at. hidden: inside, or on the far face */
+function holeState(vk,s,hh){
+  const [ax,nearHigh]=DEPTH[vk],[s0,s1]=s.r[ax],[h0,h1]=hh.r[ax],e=0.05;
+  if(h0<=s0+e&&h1>=s1-e)return 'through';
+  if(nearHigh?(h1>=s1-e&&h0<s1):(h0<=s0+e&&h1>s0))return 'open';
+  return 'hidden';
+}
+function areaIn(vk,p){const V=VIEWS[vk];const a=p.r[V.h],b=p.r[V.v];return (a[1]-a[0])*(b[1]-b[0]);}
+function hits(vk,p,u,v,m){
+  const P=outline(p,vk),[a,b]=mdl(vk,u,v);
+  if(inPoly(a,b,P))return true;
+  return !!m&&polyDist([a,b],P.concat([P[0]]))*ui.s<=m;
+}
+const reachable=p=>!p.cutOf||ui.inside===p.cutOf;
+function piecesAt(vk,u,v,m){if(m===undefined)m=2;return st.pieces.filter(p=>reachable(p)&&hits(vk,p,u,v,m)).sort((p,q)=>areaIn(vk,p)-areaIn(vk,q));}
+const jointsHere=(vk,p)=>!!p&&ui.editJoints&&p.id===ui.sel&&vk===ui.jointView&&!!p.out[vk];
+function edgeHit(vk,p,u,v){
+  const r=rectOf(vk,p),T=7;
+  if(u<r.u1-T||u>r.u2+T||v<r.v1-T||v>r.v2+T)return null;
+  const e={l:Math.abs(u-r.u1)<=T,r:Math.abs(u-r.u2)<=T,t:Math.abs(v-r.v1)<=T,b:Math.abs(v-r.v2)<=T};
+  if(e.l&&e.r){if(Math.abs(u-r.u1)<Math.abs(u-r.u2))e.r=false;else e.l=false;}
+  if(e.t&&e.b){if(Math.abs(v-r.v1)<Math.abs(v-r.v2))e.b=false;else e.t=false;}
+  return (e.l||e.r||e.t||e.b)?e:null;
+}
+/* box edges stretch a shape in any view, except in the view where you are editing its joints */
+function edgeTarget(vk,u,v){
+  if(ui.multi.length>1)return null;
+  const sel=getP(ui.sel);
+  if(sel&&!jointsHere(vk,sel)){const e=edgeHit(vk,sel,u,v);if(e)return {p:sel,e};}
+  const inside=piecesAt(vk,u,v,0);
+  const cands=inside.length?[inside[0]]:piecesAt(vk,u,v,7);
+  for(const p of cands){if(p.id===ui.sel)continue;const e=edgeHit(vk,p,u,v);if(e)return {p,e};}
+  return null;
+}
+function jointAt(vk,p,u,v){
+  if(!jointsHere(vk,p))return -1;
+  let best=-1,bd=9;p.out[vk].forEach((q,i)=>{const s=scr(vk,q[0],q[1]),d=Math.hypot(s[0]-u,s[1]-v);if(d<bd){bd=d;best=i;}});return best;
+}
+/* while editing joints, hovering an edge offers a new joint at the nearest point on it */
+function ghostAt(vk,p,u,v){
+  if(!jointsHere(vk,p)||jointAt(vk,p,u,v)>=0)return null;
+  const i=edgeAt(vk,p,u,v);if(i<0)return null;
+  const P=p.out[vk],q=P[i],n=P[(i+1)%P.length],[a,b]=mdl(vk,u,v);
+  const dx=n[0]-q[0],dy=n[1]-q[1],L=dx*dx+dy*dy,t=clamp(((a-q[0])*dx+(b-q[1])*dy)/(L||1),0,1);
+  return {vk,i,pt:[r1(q[0]+t*dx),r1(q[1]+t*dy)]};
+}
+const ADD_CURSOR=`url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='22' height='22'><circle cx='11' cy='11' r='6' fill='white' stroke='%230b5fd0' stroke-width='1.6'/><path d='M11 8v6M8 11h6' stroke='%230b5fd0' stroke-width='1.6' stroke-linecap='round'/></svg>") 11 11, copy`;
+function setGhost(g){
+  const old=ui.ghost;ui.ghost=g;
+  const same=old&&g&&old.vk===g.vk&&old.i===g.i&&eq(old.pt[0],g.pt[0])&&eq(old.pt[1],g.pt[1]);
+  if(!same){if(old)renderView(old.vk);if(g&&(!old||old.vk!==g.vk))renderView(g.vk);}
+}
+function edgeAt(vk,p,u,v){
+  if(!p)return -1;
+  const P=outline(p,vk),[a,b]=mdl(vk,u,v);let best=-1,bd=7/ui.s;
+  P.forEach((q,i)=>{const n=P[(i+1)%P.length],d=segDist(a,b,q[0],q[1],n[0],n[1]);if(d<bd){bd=d;best=i;}});
+  return best;
+}
+
+/* ---------- split lines ----------
+   A split is a straight line across a piece at one position on one axis (a plane through the solid).
+   It shows as a dashed line in every view that has that axis, with a joint wherever it crosses the outline.
+   Dragging the line moves those joints together. */
+const splitViews=axis=>ORDER.filter(vk=>axIx(vk,axis)>=0);
+/* add joints where the outline crosses value `val` on coordinate k (not next to rounded corners, which would lose their curve) */
+function insertAt(P,k,val){
+  const out=[],n=P.length,o=1-k;
+  for(let i=0;i<n;i++){
+    const q=P[i],m=P[(i+1)%n];out.push(q);
+    if(q[2]>0||m[2]>0)continue;
+    const a=q[k]-val,b=m[k]-val;
+    if((a<-0.05&&b>0.05)||(a>0.05&&b<-0.05)){const t=a/(a-b),pt=[0,0];pt[k]=val;pt[o]=Math.round(q[o]+(m[o]-q[o])*t);out.push(pt);}
+  }
+  return out;
+}
+function addSplit(p,axis,val){
+  const [lo,hi]=p.r[axis];if(!(val>lo+0.5&&val<hi-0.5))return false;
+  p.splits=(p.splits||[]).filter(sl=>!(sl.axis===axis&&eq(sl.val,val)));
+  p.splits.push({axis,val});
+  for(const vk of splitViews(axis))p.out[vk]=insertAt(outline(p,vk).map(q=>q.slice()),axIx(vk,axis),val);
+  tidy(p);
+  return true;
+}
+/* removing a line drops the joints it added, as long as they still sit on a straight edge */
+function removeSplit(p,i){
+  const sl=p.splits[i];p.splits.splice(i,1);if(!p.splits.length)delete p.splits;
+  for(const vk of splitViews(sl.axis)){
+    const P=p.out[vk];if(!P)continue;const k=axIx(vk,sl.axis);
+    for(let j=P.length-1;j>=0&&P.length>3;j--){
+      const q=P[j];if(!eq(q[k],sl.val)||q[2]>0)continue;
+      const a=P[(j-1+P.length)%P.length],b=P[(j+1)%P.length];
+      if(Math.abs((q[0]-a[0])*(b[1]-a[1])-(q[1]-a[1])*(b[0]-a[0]))<0.5*Math.hypot(b[0]-a[0],b[1]-a[1]))P.splice(j,1);
+    }
+  }
+  tidy(p);
+}
+/* the parts of a split line that lie inside the shape, as [from,to] along the other axis */
+function splitSpans(p,vk,sl){
+  const k=axIx(vk,sl.axis);if(k<0)return [];
+  const o=1-k,P=outline(p,vk),n=P.length,ts=[];
+  for(let i=0;i<n;i++){
+    const q=P[i],m=P[(i+1)%n],a=q[k]-sl.val,b=m[k]-sl.val;
+    if(Math.abs(a)<0.05)ts.push(q[o]);
+    if((a<-0.05&&b>0.05)||(a>0.05&&b<-0.05))ts.push(q[o]+(m[o]-q[o])*a/(a-b));
+  }
+  ts.sort((x,y)=>x-y);
+  const out=[];
+  for(let i=0;i+1<ts.length;i++){
+    if(ts[i+1]-ts[i]<0.05)continue;
+    const mid=(ts[i]+ts[i+1])/2,pt=[0,0];pt[k]=sl.val;pt[o]=mid;
+    if(inPoly(pt[0],pt[1],P)){if(out.length&&eq(out[out.length-1][1],ts[i]))out[out.length-1][1]=ts[i+1];else out.push([ts[i],ts[i+1]]);}
+  }
+  return out;
+}
+function splitD(vk,p,sl){
+  const k=axIx(vk,sl.axis);let d='';
+  for(const [t0,t1] of splitSpans(p,vk,sl)){const A=k?[t0,sl.val]:[sl.val,t0],B=k?[t1,sl.val]:[sl.val,t1];d+=pathD(vk,[A,B],false);}
+  return d;
+}
+/* which split line of p is under the pointer (within 6 px) */
+function splitAt(vk,p,u,v){
+  if(!p||!p.splits)return -1;
+  const [a,b]=mdl(vk,u,v);let best=-1,bd=6/ui.s;
+  p.splits.forEach((sl,i)=>{
+    const k=axIx(vk,sl.axis);if(k<0)return;
+    const c=k?b:a,o=k?a:b;
+    for(const [t0,t1] of splitSpans(p,vk,sl)){const d=Math.hypot(c-sl.val,Math.max(0,t0-o,o-t1));if(d<bd){bd=d;best=i;}}
+  });
+  return best;
+}
+/* the split tool's line: up-down (or a click) is vertical, sideways is horizontal */
+function splitPreview(d,u,v,noSnap){
+  const V=VIEWS[d.vk],p=getP(d.id),du=u-d.u0,dv=v-d.v0;ui.guides=[];
+  const vertical=Math.hypot(du,dv)<6||Math.abs(dv)>=Math.abs(du),axis=vertical?V.h:V.v,k=vertical?0:1;
+  const own=shaped(p).flatMap(vk=>{const j=axIx(vk,axis);return j<0?[]:p.out[vk].map(q=>q[j]);});
+  const val=snapTo(vertical?d.a0:d.b0,axis,cands(axis,p).concat(own),noSnap);
+  const [lo,hi]=p.r[axis];
+  ui.splitPrev={vk:d.vk,id:p.id,axis,val,ok:val>lo+0.5&&val<hi-0.5};
+}
+function applySplitDrag(d,a,b,noSnap){
+  const p=reset(d),sl=p.splits[d.i],k=axIx(d.vk,sl.axis);ui.guides=[];
+  const [lo,hi]=p.r[sl.axis];
+  let nv=snapTo(sl.val+(k?b-d.b0:a-d.a0),sl.axis,cands(sl.axis,p),noSnap);
+  nv=clamp(nv,lo+1,hi-1);
+  for(const vk of splitViews(sl.axis)){const P=p.out[vk];if(!P)continue;const j=axIx(vk,sl.axis);for(const q of P)if(eq(q[j],sl.val))q[j]=nv;}
+  for(const o of p.splits)if(o!==sl&&o.axis===sl.axis&&eq(o.val,nv))return;
+  sl.val=nv;
+}
+
+/* ---------- snapping ---------- */
+function cands(axis,ex,skip){
+  const out=[0];
+  for(const p of st.pieces){
+    if(ex&&p.id===ex.id)continue;
+    if(skip&&skip.includes(p.id))continue;
+    out.push(p.r[axis][0],p.r[axis][1]);
+    for(const vk of shaped(p)){const k=axIx(vk,axis);if(k>=0)for(const q of p.out[vk])out.push(q[k]);}
+  }
+  return out;
+}
+const gridRound=v=>Math.round(Math.round(v/st.grid)*st.grid);
+function snapTo(val,axis,list,noSnap){
+  if(noSnap||!st.snap)return Math.round(val);
+  const tol=6/ui.s;let best=null,bd=tol;
+  for(const c of list){const d=Math.abs(c-val);if(d<bd){bd=d;best=c;}}
+  if(best!==null){ui.guides.push({axis,val:best});return best;}
+  return gridRound(val);
+}
+function snapSpan(start,size,axis,list,noSnap){
+  if(noSnap||!st.snap)return Math.round(start);
+  const tol=6/ui.s;let best=null,bd=tol;
+  for(const c of list){let d=Math.abs(c-start);if(d<bd){bd=d;best={s:c,g:c};}d=Math.abs(c-(start+size));if(d<bd){bd=d;best={s:c-size,g:c};}}
+  if(best){ui.guides.push({axis,val:best.g});return best.s;}
+  return gridRound(start);
+}
+function snapClean(v,list,tol){let best=null,bd=tol;for(const c of list){const d=Math.abs(c-v);if(d<bd){bd=d;best=c;}}if(best!==null)return best;return st.snap?gridRound(v):Math.round(v);}
+
+/* ---------- clean up: rough strokes -> straight outline with snapped joints ---------- */
+function chainStrokes(list){
+  const rest=list.map(s=>s.pts.slice());let path=rest.shift();
+  while(rest.length){
+    const end=path[path.length-1];let bi=0,rev=false,bd=Infinity;
+    rest.forEach((p,i)=>{const d0=Math.hypot(end[0]-p[0][0],end[1]-p[0][1]),d1=Math.hypot(end[0]-p[p.length-1][0],end[1]-p[p.length-1][1]);if(d0<bd){bd=d0;bi=i;rev=false;}if(d1<bd){bd=d1;bi=i;rev=true;}});
+    const nx=rest.splice(bi,1)[0];if(rev)nx.reverse();path=path.concat(nx);
+  }
+  return path;
+}
+function rdp(P,eps){
+  if(P.length<3)return P.slice();
+  const keep=new Array(P.length).fill(false);keep[0]=keep[P.length-1]=true;
+  const stack=[[0,P.length-1]];
+  while(stack.length){const [a,b]=stack.pop();let md=0,mi=-1;for(let i=a+1;i<b;i++){const d=segDist(P[i][0],P[i][1],P[a][0],P[a][1],P[b][0],P[b][1]);if(d>md){md=d;mi=i;}}if(md>eps&&mi>0){keep[mi]=true;stack.push([a,mi],[mi,b]);}}
+  return P.filter((_,i)=>keep[i]);
+}
+function mergeClose(P,tol){
+  P=P.map(p=>p.slice());let changed=true;
+  while(changed&&P.length>3){changed=false;for(let i=0;i<P.length;i++){const j=(i+1)%P.length;if(Math.hypot(P[i][0]-P[j][0],P[i][1]-P[j][1])<tol){P[i]=[(P[i][0]+P[j][0])/2,(P[i][1]+P[j][1])/2];P.splice(j,1);changed=true;break;}}}
+  return P;
+}
+/* remove joints that sit on a straight line, and spikes that double back */
+function dropStraight(P,thr){
+  P=P.map(p=>p.slice());let changed=true;
+  while(changed&&P.length>3){
+    changed=false;
+    for(let i=0;i<P.length;i++){
+      const a=P[(i-1+P.length)%P.length],b=P[i],c=P[(i+1)%P.length];
+      if(Math.hypot(b[0]-a[0],b[1]-a[1])<1e-6||Math.hypot(c[0]-b[0],c[1]-b[1])<1e-6){P.splice(i,1);changed=true;break;}
+      let t=Math.abs(Math.atan2(c[1]-b[1],c[0]-b[0])-Math.atan2(b[1]-a[1],b[0]-a[0]));if(t>Math.PI)t=2*Math.PI-t;
+      if(t<thr||t>Math.PI-thr){P.splice(i,1);changed=true;break;}
+    }
+  }
+  return P;
+}
+function cleanShape(path,vk,tol){
+  const V=VIEWS[vk],stol=6/ui.s;
+  let P=rdp(path.concat([path[0]]),8/ui.s);P.pop();
+  P=mergeClose(P,tol);
+  P=dropStraight(P,0.21);
+  if(P.length<3)return null;
+  /* lines within 7° of level or upright become exactly level/upright */
+  const lim=Math.tan(7*Math.PI/180);
+  for(let pass=0;pass<2;pass++)for(let i=0;i<P.length;i++){
+    const a=P[i],b=P[(i+1)%P.length],dx=b[0]-a[0],dy=b[1]-a[1];
+    if(Math.abs(dy)<=Math.abs(dx)*lim){const m=(a[1]+b[1])/2;a[1]=m;b[1]=m;}
+    else if(Math.abs(dx)<=Math.abs(dy)*lim){const m=(a[0]+b[0])/2;a[0]=m;b[0]=m;}
+  }
+  /* joints that nearly line up share one exact coordinate, then snap to other shapes and the grid */
+  for(const k of [0,1]){
+    const axis=k?V.v:V.h,list=cands(axis,null);
+    const idx=P.map((_,i)=>i).sort((i,j)=>P[i][k]-P[j][k]);
+    let cl=[];
+    const flush=()=>{if(!cl.length)return;const m=cl.reduce((s,i)=>s+P[i][k],0)/cl.length,sv=snapClean(m,list,stol);cl.forEach(i=>{P[i][k]=sv;});cl=[];};
+    for(const i of idx){if(cl.length&&P[i][k]-P[cl[cl.length-1]][k]>tol*0.6)flush();cl.push(i);}
+    flush();
+  }
+  P=dropStraight(P,0.02);
+  if(P.length<3||Math.abs(polyArea(P))<4)return null;
+  return P.map(p=>[r1(p[0]),r1(p[1])]);
+}
+function cleanup(){
+  if(!st.strokes.length){toast('Nothing to clean up yet. Draw an outline with the pencil first.');return;}
+  const before=snap(),keep=[],created=[];
+  const tol=12/ui.s;
+  for(const vk of ORDER){
+    const V=VIEWS[vk],ss=st.strokes.filter(s=>s.view===vk);
+    if(!ss.length)continue;
+    const info=ss.map(s=>{
+      const [a1,b1,a2,b2]=bboxOf(s.pts),s0=s.pts[0],s1=s.pts[s.pts.length-1];
+      const gap=Math.hypot(s0[0]-s1[0],s0[1]-s1[1]);
+      return {s,closed:gap<Math.max(tol,0.3*Math.max(a2-a1,b2-b1)),ends:[s0,s1]};
+    });
+    /* open strokes that meet (an outline drawn in several lines) form one shape */
+    const parent=info.map((_,i)=>i);
+    const find=i=>parent[i]===i?i:(parent[i]=find(parent[i]));
+    for(let i=0;i<info.length;i++)for(let j=i+1;j<info.length;j++){
+      const A=info[i],B=info[j];if(A.closed||B.closed)continue;
+      if(A.ends.some(p=>polyDist(p,B.s.pts)<tol)||B.ends.some(p=>polyDist(p,A.s.pts)<tol))parent[find(i)]=find(j);
+    }
+    const groups={};info.forEach((x,i)=>{const r=find(i);(groups[r]=groups[r]||[]).push(x);});
+    for(const g of Object.values(groups)){
+      const path=g.length===1?g[0].s.pts.slice():chainStrokes(g.map(x=>x.s));
+      const pts=path.length>=3?cleanShape(path,vk,tol):null;
+      if(!pts){g.forEach(x=>keep.push(x.s));continue;}
+      const [a1,b1,a2,b2]=bboxOf(pts),D=st.defDepth;
+      const r={x:[0,D],y:[0,D],z:[0,D]};r[V.h]=[a1,a2];r[V.v]=[b1,b2];
+      const p={id:newId(),name:nextName(),r,out:{[vk]:pts}};
+      tidy(p);st.pieces.push(p);created.push(p.id);
+    }
+  }
+  if(!created.length){toast('No shapes found. Draw a closed outline, or lines that meet at the corners.');return;}
+  pushHist(before);
+  st.strokes=keep;st.example=false;
+  ui.sel=created[created.length-1];ui.editJoints=false;
+  setTool('select',true);
+  save();fit();
+  const n=created.length;
+  toast(`Made ${n} shape${n>1?'s':''}. Depth is ${fmtU(st.defDepth)} ${UN()}. Double-click a shape in any view to edit its joints there.`+(keep.length?` ${keep.length} stroke${keep.length>1?'s':''} left as sketch.`:''));
+}
+
+/* ---------- fit & zoom ---------- */
+function bounds(){
+  const R={x:[Infinity,-Infinity],y:[Infinity,-Infinity],z:[Infinity,-Infinity]};
+  const ext=(r,a,b)=>{r[0]=Math.min(r[0],a);r[1]=Math.max(r[1],b);};
+  for(const p of st.pieces)for(const a of ['x','y','z'])ext(R[a],p.r[a][0],p.r[a][1]);
+  for(const s of st.strokes){const V=VIEWS[s.view];for(const p of s.pts){ext(R[V.h],p[0],p[0]);ext(R[V.v],p[1],p[1]);}}
+  for(const k of ['x','y','z']){const r=R[k];if(!isFinite(r[0])){r[0]=0;r[1]=300;}r[0]=Math.min(r[0],0);r[1]=Math.max(r[1],0);if(r[1]-r[0]<60)r[1]=r[0]+60;}
+  return R;
+}
+/* the floating top cards cover the top of Front and Right side: keep labels and fitted drawings below them */
+function topInset(){
+  const h=document.querySelector('header'),sh=document.querySelector('.sheet');
+  if(!h||getComputedStyle(h).position!=='fixed')return 0;
+  return Math.max(0,Math.min(h.getBoundingClientRect().bottom-sh.getBoundingClientRect().top+8,dims('front').h-120));
+}
+function applyInsets(){document.querySelector('.sheet').style.setProperty('--it',topInset()+'px');}
+function fit(){
+  const F=dims('front'),T=dims('top'),S=dims('side');
+  if(F.w<50||F.h<50){render();return;}
+  const B=bounds(),m=56,ti=topInset(),fh=F.h-ti;
+  const rx=B.x[1]-B.x[0],ry=B.y[1]-B.y[0],rz=B.z[1]-B.z[0];
+  const s=clamp(Math.min((F.w-2*m)/rx,(fh-2*m)/ry,(T.w-2*m)/rx,(T.h-2*m)/rz,(S.w-2*m)/rz,(fh-2*m)/ry),0.05,30);
+  ui.s=s;
+  ui.o.x=(F.w-rx*s)/2-B.x[0]*s;
+  ui.o.y=F.h-(fh-ry*s)/2+B.y[0]*s;
+  ui.o.zSide=(S.w-rz*s)/2-B.z[0]*s;
+  ui.o.zTop=T.h-(T.h-rz*s)/2+B.z[0]*s;
+  render();
+}
+function zoomAbout(vk,u,v,k){
+  const V=VIEWS[vk];ui.s*=k;
+  const ti=topInset(),centers={x:dims('front').w/2,y:ti+(dims('front').h-ti)/2,zSide:dims('side').w/2,zTop:dims('top').h/2};
+  for(const key of ['x','y','zSide','zTop']){const c=key===V.oh?u:key===V.ov?v:centers[key];ui.o[key]=c-(c-ui.o[key])*k;}
+  render();
+}
+
+/* ---------- rendering ---------- */
+const f1=n=>n.toFixed(1);
+/* rounded corner at B between edges BA and BC. The cut back along each edge is at most half that edge,
+   so two rounded neighbours can meet in the middle (four full corners on a square make a circle). */
+function fillet(A,B,C,r){
+  const ax=A[0]-B[0],ay=A[1]-B[1],cx=C[0]-B[0],cy=C[1]-B[1],la=Math.hypot(ax,ay),lc=Math.hypot(cx,cy);
+  if(la<1e-6||lc<1e-6)return null;
+  const ux=ax/la,uy=ay/la,vx=cx/lc,vy=cy/lc,phi=Math.acos(clamp(ux*vx+uy*vy,-1,1));
+  if(phi<1e-3||phi>Math.PI-1e-3)return null;
+  const tanH=Math.tan(phi/2),t=Math.min(r/tanH,la/2,lc/2),re=t*tanH;
+  const p1=[B[0]+ux*t,B[1]+uy*t],p2=[B[0]+vx*t,B[1]+vy*t],k=4/3*Math.tan((Math.PI-phi)/4)*re;
+  return {p1,c1:[p1[0]-ux*k,p1[1]-uy*k],c2:[p2[0]-vx*k,p2[1]-vy*k],p2,re};
+}
+function maxRad(P,i){
+  const n=P.length,A=P[(i-1+n)%n],B=P[i],C=P[(i+1)%n];
+  const la=Math.hypot(A[0]-B[0],A[1]-B[1]),lc=Math.hypot(C[0]-B[0],C[1]-B[1]);if(la<1e-6||lc<1e-6)return 0;
+  const phi=Math.acos(clamp(((A[0]-B[0])*(C[0]-B[0])+(A[1]-B[1])*(C[1]-B[1]))/(la*lc),-1,1));
+  if(phi<1e-3||phi>Math.PI-1e-3)return 0;
+  return Math.min(la,lc)/2*Math.tan(phi/2);
+}
+function outlineD(vk,P){
+  if(!P.some(q=>q[2]>0))return pathD(vk,P,true);
+  const n=P.length,xy=q=>{const s=scr(vk,q[0],q[1]);return f1(s[0])+' '+f1(s[1]);};let d='';
+  for(let i=0;i<n;i++){
+    const B=P[i],f=B[2]>0?fillet(P[(i-1+n)%n],B,P[(i+1)%n],B[2]):null;
+    if(f)d+=(i?'L':'M')+xy(f.p1)+'C'+xy(f.c1)+' '+xy(f.c2)+' '+xy(f.p2);
+    else d+=(i?'L':'M')+xy(B);
+  }
+  return d+'Z';
+}
+function pathD(vk,pts,close){let d='';pts.forEach((p,i)=>{const q=scr(vk,p[0],p[1]);d+=(i?'L':'M')+f1(q[0])+' '+f1(q[1]);});return close?d+'Z':d;}
+/* a joint in another view's outline is an edge running straight through: it shows as a line across this view's box */
+function edgeLines(vk,p){
+  const V=VIEWS[vk],r=rectOf(vk,p);let d='';
+  for(const ov of shaped(p)){
+    if(ov===vk)continue;
+    for(const axis of [V.h,V.v]){
+      const k=axIx(ov,axis);if(k<0)continue;
+      const [lo,hi]=p.r[axis];
+      for(const val of [...new Set(p.out[ov].map(q=>q[k]))]){
+        if(eq(val,lo)||eq(val,hi))continue;
+        if(axis===V.h){const u=f1(scr(vk,val,0)[0]);d+=`M${u} ${f1(r.v1)}V${f1(r.v2)}`;}
+        else{const v=f1(scr(vk,0,val)[1]);d+=`M${f1(r.u1)} ${v}H${f1(r.u2)}`;}
+      }
+    }
+  }
+  return d;
+}
+function renderView(vk){
+  const svg=svgs[vk],V=VIEWS[vk],s=ui.s;
+  const {w:W,h:H}=dims(vk);
+  const oh=ui.o[V.oh],ov=ui.o[V.ov];
+  let h='';
+  const steps=[1,2,5,10,20,50,100,200,500,1000];
+  const minor=steps.find(m=>m*s>=8)||1000,major=minor*5;
+  let dMin='',dMaj='',lab='';
+  const a0=Math.ceil(-oh/s/minor),a1=Math.floor((W-oh)/s/minor);
+  for(let i=a0;i<=a1;i++){const u=f1(oh+i*minor*s);const seg=`M${u} 0V${H}`;if(i%5===0){dMaj+=seg;if(major*s>=40)lab+=`<text class="rt" x="${+u+3}" y="${H-6}">${fmtU(i*minor)}</text>`;}else dMin+=seg;}
+  const b0=Math.ceil((ov-H)/s/minor),b1=Math.floor(ov/s/minor);
+  for(let i=b0;i<=b1;i++){const v=f1(ov-i*minor*s);const seg=`M0 ${v}H${W}`;if(i%5===0){dMaj+=seg;if(major*s>=40&&+v>34)lab+=`<text class="rt" x="4" y="${+v-3}">${fmtU(i*minor)}</text>`;}else dMin+=seg;}
+  h+=`<path class="g-minor" d="${dMin}"/><path class="g-major" d="${dMaj}"/><path class="g-axis" d="M${f1(oh)} 0V${H}M0 ${f1(ov)}H${W}"/>`+lab;
+  const solids=st.pieces.filter(p=>!p.cutOf).sort((p,q)=>areaIn(vk,q)-areaIn(vk,p));
+  const holes=st.pieces.filter(p=>p.cutOf).sort((p,q)=>areaIn(vk,q)-areaIn(vk,p));
+  const label=(p,P,cuts)=>{
+    const r=rectOf(vk,p),quiet=p.cutOf&&!isSel(p)&&ui.inside!==p.cutOf;
+    if(r.u2-r.u1>(quiet?36:20)&&r.v2-r.v1>(quiet?22:16)){const c=labelPoint(P,cuts),q=scr(vk,c[0],c[1]);return `<text class="bname${p.cutOf?' hname':''}${quiet?' quiet':''}" x="${f1(q[0])}" y="${f1(q[1])}">${esc(p.name)}</text>`;}
+    return '';
+  };
+  let defs='';
+  const mask=(id,blacks)=>{defs+=`<mask id="${id}" maskUnits="userSpaceOnUse" x="0" y="0" width="${W}" height="${H}"><rect width="${W}" height="${H}" fill="#fff"/>${blacks}</mask>`;return ` mask="url(#${id})"`;};
+  const black=(q,w)=>`<path d="${outlineD(vk,outline(q,vk))}" fill="#000"${w?` stroke="#000" stroke-width="${w}"`:''}/>`;
+  const drawnInGroup={};
+  const faded=p=>ui.inside&&p.id!==ui.inside&&p.cutOf!==ui.inside?' dim':'';
+  for(const p of solids){
+    const sel=(isSel(p)||(p.mergeId&&solids.some(o=>o.mergeId===p.mergeId&&isSel(o))))?' sel':'',P=outline(p,vk),D=outlineD(vk,P),dim=faded(p);
+    /* its holes that go all the way through, seen from this view, are cut out */
+    const cuts=cuttersOf(p).filter(c=>overlapIn(vk,p,c)&&holeState(vk,p,c)==='through');
+    const cutB=cuts.map(c=>black(c)).join('');
+    if(p.mergeId){
+      /* merged parts are drawn together: one fill without overlaps, and only the outer outline.
+         The outline is a double-width stroke with every part's inside masked away, so lines between parts vanish. */
+      if(drawnInGroup[p.mergeId])continue;
+      drawnInGroup[p.mergeId]=1;
+      const M=solids.filter(o=>o.mergeId===p.mergeId);
+      const mc=M.flatMap(m=>cuttersOf(m).filter(c=>overlapIn(vk,m,c)&&holeState(vk,m,c)==='through'));
+      const mcB=mc.map(c=>black(c)).join('');
+      const cm=mcB?mask(`f-${vk}-${p.id}`,mcB):'';
+      const om=mask(`o-${vk}-${p.id}`,mcB+M.map(m=>black(m)).join(''));
+      const paths=M.map(m=>`<path d="${outlineD(vk,outline(m,vk))}"/>`).join('');
+      h+=`<g class="mfill${sel}${dim}"${cm}>${paths}</g><g class="mline${sel}${dim}"${om}>${paths}</g>`;
+      for(const m of M)if(!m.out[vk]){const el=edgeLines(vk,m);if(el)h+=`<path class="edge${sel}${dim}" d="${el}"${cm}/>`;}
+      h+=label(p,P,mc.map(c=>outline(c,vk)));
+    }else{
+      const fm=cutB?mask(`f-${vk}-${p.id}`,cutB):'';
+      h+=`<path class="box${sel}${dim}" d="${D}"${fm}/>`;
+      if(!p.out[vk]){const el=edgeLines(vk,p);if(el)h+=`<path class="edge${sel}${dim}" d="${el}"${fm}/>`;}
+      h+=label(p,P,cuts.map(c=>outline(c,vk)));
+    }
+  }
+  for(const c of holes){
+    const P=outline(c,vk),base=getP(c.cutOf);
+    const state=base&&overlapIn(vk,base,c)?holeState(vk,base,c):'hidden';
+    h+=`<path class="hole ${state}${isSel(c)?' sel':''}${faded(c)}" d="${outlineD(vk,P)}"/>`+label(c,P);
+  }
+  /* Top view: the rings a shaped body makes at every height where its Front or Side outline has a joint */
+  if(vk==='top')for(const p of st.pieces){
+    if(!isLoft(p))continue;
+    const on=isSel(p)||(p.cutOf&&isSel(getP(p.cutOf)||{}))?' sel':'';
+    for(const sec of loftSections(p,true).secs){
+      if(sec.full||sec.pts.length<3)continue;
+      h+=`<path class="ring${on}${faded(p)}" d="${pathD('top',sec.pts,true)}"/>`;
+    }
+  }
+  for(const p of st.pieces){
+    if(!p.splits)continue;
+    const on=isSel(p)?' sel':'';
+    for(const sl of p.splits){const d=splitD(vk,p,sl);if(d)h+=`<path class="split${on}${faded(p)}" d="${d}"/>`;}
+  }
+  const sv=ui.splitPrev;
+  if(sv&&sv.ok){const p=getP(sv.id),d=p&&splitD(vk,p,sv);if(d)h+=`<path class="split live" d="${d}"/>`;}
+  if(defs)h+=`<defs>${defs}</defs>`;
+  for(const sk of st.strokes)if(sk.view===vk)h+=`<path class="stroke" d="${pathD(vk,sk.pts)}"/>`;
+  for(const g of ui.guides){
+    if(g.axis===V.h){const u=f1(oh+g.val*s);h+=`<path class="guide" d="M${u} 0V${H}"/>`;}
+    if(g.axis===V.v){const v=f1(ov-g.val*s);h+=`<path class="guide" d="M0 ${v}H${W}"/>`;}
+  }
+  const sp=getP(ui.sel);
+  if(sp&&ui.multi.length<2)h+=`<g class="${sp.cutOf?'cut':''}">`+(jointsHere(vk,sp)?jointOverlay(vk,sp):rectOverlay(vk,sp))+'</g>';
+  if(ui.ghost&&ui.ghost.vk===vk&&jointsHere(vk,sp)){const g=scr(vk,ui.ghost.pt[0],ui.ghost.pt[1]);h+=`<circle class="ghost" cx="${f1(g[0])}" cy="${f1(g[1])}" r="4.5"/>`;}
+  h+=`<path class="live" id="live-${vk}" d=""/>`;
+  svg.innerHTML=h;
+  svg.parentElement.classList.toggle('editing',!!sp&&jointsHere(vk,sp));
+}
+function jointOverlay(vk,p){
+  let h='';const P=p.out[vk];
+  P.forEach((q,i)=>{
+    const n=P[(i+1)%P.length],A=scr(vk,q[0],q[1]),B=scr(vk,n[0],n[1]);
+    if(Math.hypot(B[0]-A[0],B[1]-A[1])<26)return;
+    let nx=-(B[1]-A[1]),ny=B[0]-A[0];const L=Math.hypot(nx,ny)||1;nx/=L;ny/=L;
+    const mx=(A[0]+B[0])/2,my=(A[1]+B[1])/2;
+    const [ta,tb]=mdl(vk,mx+nx*4,my+ny*4);if(inPoly(ta,tb,P)){nx=-nx;ny=-ny;}
+    h+=`<text class="elen" x="${f1(mx+nx*11)}" y="${f1(my+ny*11)}">${fmtU(Math.hypot(n[0]-q[0],n[1]-q[1]))}</text>`;
+  });
+  P.forEach((q,i)=>{
+    const A=scr(vk,q[0],q[1]),on=i===ui.joint;
+    h+=`<circle class="joint${on?' on':''}" cx="${f1(A[0])}" cy="${f1(A[1])}" r="${on?5.5:4.5}"/>`;
+    if(on&&q[2]>0)h+=`<text class="rlab" x="${f1(A[0]+9)}" y="${f1(A[1]-9)}">R ${fmtU(Math.min(q[2],maxRad(P,i)))}</text>`;
+  });
+  return h;
+}
+function rectOverlay(vk,p){
+  const V=VIEWS[vk],r=rectOf(vk,p);let h='';
+  const mu=(r.u1+r.u2)/2,mv=(r.v1+r.v2)/2;
+  const [a1,a2]=p.r[V.h],[b1,b2]=p.r[V.v];
+  const dy=r.v2+18;
+  h+=`<path class="dim" d="M${f1(r.u1)} ${f1(r.v2+4)}V${f1(dy+4)}M${f1(r.u2)} ${f1(r.v2+4)}V${f1(dy+4)}M${f1(r.u1)} ${f1(dy)}H${f1(r.u2)}M${f1(r.u1-4)} ${f1(dy+4)}l8 -8M${f1(r.u2-4)} ${f1(dy+4)}l8 -8"/>`;
+  h+=`<text class="dimt" x="${f1(mu)}" y="${f1(dy-5)}" text-anchor="middle">${fmtU(a2-a1)}</text>`;
+  const dx=r.u2+18;
+  h+=`<path class="dim" d="M${f1(r.u2+4)} ${f1(r.v1)}H${f1(dx+4)}M${f1(r.u2+4)} ${f1(r.v2)}H${f1(dx+4)}M${f1(dx)} ${f1(r.v1)}V${f1(r.v2)}M${f1(dx-4)} ${f1(r.v1+4)}l8 -8M${f1(dx-4)} ${f1(r.v2+4)}l8 -8"/>`;
+  h+=`<text class="dimt" text-anchor="middle" transform="translate(${f1(dx-5)} ${f1(mv)}) rotate(-90)">${fmtU(b2-b1)}</text>`;
+  h+=`<rect class="frame" x="${f1(r.u1)}" y="${f1(r.v1)}" width="${f1(r.u2-r.u1)}" height="${f1(r.v2-r.v1)}"/>`;
+  for(const q of [[r.u1,r.v1],[r.u2,r.v1],[r.u1,r.v2],[r.u2,r.v2],[mu,r.v1],[mu,r.v2],[r.u1,mv],[r.u2,mv]])
+    h+=`<rect class="handle" x="${f1(q[0]-3.5)}" y="${f1(q[1]-3.5)}" width="7" height="7"/>`;
+  return h;
+}
+function renderSide(){
+  const p=getP(ui.sel);
+  const many=ui.multi.length>1;
+  $('#noSel').hidden=!!p||many;$('#selFields').hidden=!p||many;$('#multiBox').hidden=!many;
+  if(many)$('#multiN').textContent=`${ui.multi.length} pieces selected`;
+  if(p){
+    const J=selJoint();
+    $('#cornerBox').hidden=!J;
+    if(J){
+      const m=maxRad(J.P,J.i),cur=Math.min(J.q[2]||0,m);
+      $('#jointNo').textContent=`joint ${J.i+1} of ${J.P.length}`;
+      if(document.activeElement!==$('#f-rad'))$('#f-rad').value=fmtU(cur);
+      const sl=$('#f-radr');sl.max=String(Math.max(1,Math.floor(m+0.01)));sl.disabled=m<1;if(!radDrag)sl.value=String(cur);
+    }
+    let rel='';
+    if(p.cutOf){const b=getP(p.cutOf);rel=`Hole in ${b?b.name:'?'}`;$('#relBtn').textContent='Release';}
+    else if(p.mergeId){rel=`Merged with ${st.pieces.filter(o=>o.mergeId===p.mergeId&&o.id!==p.id).map(o=>o.name).join(', ')}`;$('#relBtn').textContent='Separate';}
+    $('#relRow').hidden=!rel;$('#relText').textContent=rel;
+    $('#modeResize').setAttribute('aria-pressed',String(!ui.editJoints));$('#modeJoints').setAttribute('aria-pressed',String(ui.editJoints));
+    const vals={name:p.name};
+    for(const a of ['x','y','z']){vals[a]=p.r[a][0];vals[SIZE_OF[a]]=p.r[a][1]-p.r[a][0];}
+    for(const k of ['name','x','y','z','w','h','d']){const el=$('#f-'+k);if(document.activeElement!==el)el.value=k==='name'?vals.name:fmtU(vals[k]);}
+  }
+  $('#count').textContent=st.pieces.length;
+  $('#listEmpty').hidden=st.pieces.length>0;
+  const ordered=st.pieces.filter(x=>!x.cutOf).flatMap(x=>[x,...cuttersOf(x)]);
+  $('#list').innerHTML=ordered.map(x=>{
+    return `<li><button data-id="${x.id}" aria-current="${isSel(x)}"${x.cutOf?' class="child"':''}><span class="nm">${esc(x.name)}</span><span class="sz">${fmtU(x.r.x[1]-x.r.x[0])}×${fmtU(x.r.y[1]-x.r.y[0])}×${fmtU(x.r.z[1]-x.r.z[0])}</span></button></li>`;
+  }).join('');
+  $('#pCount').textContent=st.pieces.length;
+  const solidsAll=st.pieces.filter(x=>!x.cutOf);
+  if(solidsAll.length){
+    const R={x:[Infinity,-Infinity],y:[Infinity,-Infinity],z:[Infinity,-Infinity]};
+    for(const x of solidsAll)for(const a of ['x','y','z']){R[a][0]=Math.min(R[a][0],x.r[a][0]);R[a][1]=Math.max(R[a][1],x.r[a][1]);}
+    $('#pSize').textContent=`${fmtU(R.x[1]-R.x[0])} × ${fmtU(R.y[1]-R.y[0])} × ${fmtU(R.z[1]-R.z[0])} ${UN()}`;
+  }else $('#pSize').textContent='–';
+  $('#strokeCount').textContent=st.strokes.length;
+  $('#cleanBtn').disabled=!st.strokes.length;
+  $('#exChip').hidden=!st.example;
+  if(document.activeElement!==$('#defDepth'))$('#defDepth').value=fmtU(st.defDepth);
+  document.querySelectorAll('.u').forEach(el=>{el.textContent=UN();});
+  document.querySelectorAll('#gridSel option').forEach(o=>{o.textContent=`${fmtU(+o.value)} ${UN()}`;});
+  $('#unitMM').setAttribute('aria-pressed',String(UN()==='mm'));$('#unitCM').setAttribute('aria-pressed',String(UN()==='cm'));
+  ['f-w','f-h','f-d','f-x','f-y','f-z','f-rad','defDepth','popA','popB'].forEach(id=>{$('#'+id).step=UN()==='cm'?'0.1':'1';});
+  $('#gridSel').value=String(st.grid);$('#snapChk').checked=st.snap;
+  document.querySelectorAll('[data-tool]').forEach(btn=>btn.setAttribute('aria-pressed',String(btn.dataset.tool===ui.tool)));
+}
+function render(){
+  applyInsets();
+  const p=getP(ui.sel);
+  if(ui.editJoints&&p&&!p.out[ui.jointView])p.out[ui.jointView]=rectPts(p,ui.jointView);
+  if(ui.editJoints&&!p)ui.editJoints=false;
+  ORDER.forEach(renderView);renderSide();schedule3D();
+}
+function updateLive(){const el=document.getElementById('live-'+drag.vk);if(el)el.setAttribute('d',pathD(drag.vk,drag.pts));}
+
+/* ---------- editing ---------- */
+function reset(d){const p=getP(d.id);Object.assign(p,clone(d.orig));if(!d.orig.out)p.out={};return p;}
+function moversFor(p){
+  const ids=new Set(ui.multi.length>1&&ui.multi.includes(p.id)?ui.multi:[p.id]);
+  let grew=true;
+  while(grew){grew=false;for(const q of st.pieces){
+    if(ids.has(q.id))continue;
+    const viaCut=q.cutOf&&ids.has(q.cutOf);
+    const viaMerge=q.mergeId&&!q.cutOf&&st.pieces.some(o=>ids.has(o.id)&&o.mergeId===q.mergeId&&!o.cutOf);
+    if(viaCut||viaMerge){ids.add(q.id);grew=true;}
+  }}
+  ids.delete(p.id);
+  return [...ids].map(id=>({id,orig:clone(getP(id))}));
+}
+function applyMove(d,a,b,noSnap){
+  const V=VIEWS[d.vk],p=reset(d);ui.guides=[];
+  for(const m of d.movers)Object.assign(getP(m.id),clone(m.orig));
+  const skip=d.movers.map(m=>m.id);
+  for(const [axis,delta] of [[V.h,a-d.a0],[V.v,b-d.b0]]){
+    const [lo,hi]=p.r[axis];
+    const dd=snapSpan(lo+delta,hi-lo,axis,cands(axis,p,skip),noSnap)-lo;
+    shift(p,axis,dd);
+    for(const m of d.movers)shift(getP(m.id),axis,dd);
+  }
+}
+function applyResize(d,a,b,noSnap){
+  const V=VIEWS[d.vk],p=reset(d),e=d.e;ui.guides=[];
+  if(e.l||e.r){const [lo,hi]=p.r[V.h],L=cands(V.h,p);
+    if(e.l)setRange(p,V.h,Math.min(snapTo(lo+a-d.a0,V.h,L,noSnap),hi-1),hi);
+    else setRange(p,V.h,lo,Math.max(snapTo(hi+a-d.a0,V.h,L,noSnap),lo+1));}
+  if(e.b||e.t){const [lo,hi]=p.r[V.v],L=cands(V.v,p);
+    if(e.b)setRange(p,V.v,Math.min(snapTo(lo+b-d.b0,V.v,L,noSnap),hi-1),hi);
+    else setRange(p,V.v,lo,Math.max(snapTo(hi+b-d.b0,V.v,L,noSnap),lo+1));}
+}
+function applyJoint(d,a,b,noSnap){
+  const V=VIEWS[d.vk],p=reset(d),P=p.out[d.vk],q=P[d.i];ui.guides=[];
+  const own=k=>P.filter((_,i)=>i!==d.i).map(x=>x[k]);
+  q[0]=snapTo(q[0]+a-d.a0,V.h,cands(V.h,p).concat(own(0)),noSnap);
+  q[1]=snapTo(q[1]+b-d.b0,V.v,cands(V.v,p).concat(own(1)),noSnap);
+  syncFrom(p,d.vk);
+}
+/* typed edge length: the end joint slides along the edge, and the next wall moves with it so right angles stay square */
+function setEdgeLength(p,vk,i,L){
+  if(!p.out[vk])p.out[vk]=rectPts(p,vk);
+  const P=p.out[vk],n=P.length,j=(i+1)%n,a=P[i],b=P[j],c=P[(j+1)%n];
+  const dx=b[0]-a[0],dy=b[1]-a[1],cur=Math.hypot(dx,dy);if(cur<1e-6)return;
+  const mx=dx/cur*(L-cur),my=dy/cur*(L-cur);
+  const nextUpright=eq(c[0],b[0]),nextLevel=eq(c[1],b[1]);
+  b[0]=r1(b[0]+mx);b[1]=r1(b[1]+my);
+  if(nextUpright&&Math.abs(mx)>1e-9)c[0]=b[0];
+  if(nextLevel&&Math.abs(my)>1e-9)c[1]=b[1];
+  syncFrom(p,vk);
+  if(!(ui.editJoints&&ui.sel===p.id&&ui.jointView===vk))tidy(p);
+}
+function eraseStrokesAt(vk,u,v){
+  const p=mdl(vk,u,v),tol=10/ui.s,n=st.strokes.length;
+  st.strokes=st.strokes.filter(s=>s.view!==vk||polyDist(p,s.pts)>tol);
+  if(st.strokes.length!==n){st.example=false;return true;}
+  return false;
+}
+function cursorFor(e){if((e.l&&e.t)||(e.r&&e.b))return 'nwse-resize';if((e.r&&e.t)||(e.l&&e.b))return 'nesw-resize';return (e.l||e.r)?'ew-resize':'ns-resize';}
+function hover(vk,u,v){
+  let c='default',g=null;
+  const sp=getP(ui.sel);
+  if(spaceDown)c='grab';
+  else if(ui.tool==='pencil'||ui.tool==='eraser')c='crosshair';
+  else if(ui.tool==='split')c=st.pieces.some(p=>reachable(p)&&splitAt(vk,p,u,v)>=0)?'pointer':piecesAt(vk,u,v,0).length?'crosshair':'default';
+  else if(ui.tool==='select'&&jointAt(vk,sp,u,v)>=0)c='crosshair';
+  else if(ui.tool==='select'&&(g=splitAt(vk,sp,u,v))>=0){c=axIx(vk,sp.splits[g].axis)?'ns-resize':'ew-resize';g=null;}
+  else if(ui.tool==='select'&&(g=ghostAt(vk,sp,u,v)))c=ADD_CURSOR;
+  else if(ui.tool==='measure'&&edgeAt(vk,sp||piecesAt(vk,u,v,7)[0],u,v)>=0)c='text';
+  else{
+    const et=ui.tool==='select'?edgeTarget(vk,u,v):null;
+    if(et)c=cursorFor(et.e);
+    else if(piecesAt(vk,u,v).length)c=ui.tool==='measure'?'pointer':'move';
+    else c=ui.tool==='select'?'grab':'default';
+  }
+  svgs[vk].style.cursor=c;
+  setGhost(g);
+}
+function leaveJoints(){if(ui.editJoints){const p=getP(ui.sel);if(p)tidy(p);}ui.editJoints=false;ui.joint=null;}
+function setJoints(on,vk){
+  const p=getP(ui.sel);
+  if(on&&p){
+    vk=vk||ui.jointView||shaped(p)[0]||'front';
+    if(ui.editJoints&&ui.jointView!==vk)tidy(p);
+    if(ui.jointView!==vk||!ui.editJoints)ui.joint=null;
+    ui.editJoints=true;ui.jointView=vk;ui.tool='select';
+    if(!p.out[vk])p.out[vk]=rectPts(p,vk);
+    toast(`Editing the joints of ${p.name} in the ${VIEWS[vk].name} view. Press Esc or Enter when done.`);
+  }else{leaveJoints();save();$('#toast').classList.remove('show');}
+  closePop();render();
+}
+function select(id){
+  if(id!==ui.sel){leaveJoints();ui.joint=null;}
+  ui.sel=id;ui.multi=[];
+  const p=getP(id);
+  if(ui.inside&&!(p&&(p.id===ui.inside||p.cutOf===ui.inside)))ui.inside=null;
+}
+function toggleMulti(id){
+  leaveJoints();
+  let m=ui.multi.length?ui.multi.slice():(ui.sel?[ui.sel]:[]);
+  if(m.includes(id))m=m.filter(x=>x!==id);else m.push(id);
+  ui.sel=m.length?(m.includes(id)?id:m[m.length-1]):null;
+  ui.multi=m.length>1?m:[];
+}
+function setTool(t,quiet){ui.tool=t;closePop();if(!quiet)render();}
+function deleteSel(){const ids=ui.multi.length>1?ui.multi.slice():(ui.sel?[ui.sel]:[]);if(!ids.length)return;pushHist(snap());st.pieces=st.pieces.filter(x=>!ids.includes(x.id));ui.sel=null;ui.multi=[];ui.editJoints=false;commit();render();}
+
+/* ---------- pointer input ---------- */
+function local(vk,e){const r=svgs[vk].getBoundingClientRect();return [e.clientX-r.left,e.clientY-r.top];}
+/* double-click is detected here: the view redraws between clicks, so the browser's own dblclick event is unreliable */
+let lastDown=null;
+function onDown(vk,e){
+  closePop();
+  if(e.button===0&&ui.tool==='select'&&!spaceDown&&!e.shiftKey){
+    const now=performance.now();
+    if(lastDown&&lastDown.vk===vk&&now-lastDown.t<380&&Math.hypot(e.clientX-lastDown.x,e.clientY-lastDown.y)<6){lastDown=null;onDbl(vk,e);return;}
+    lastDown={vk,t:now,x:e.clientX,y:e.clientY};
+  }
+  const [u,v]=local(vk,e),[a,b]=mdl(vk,u,v);
+  try{svgs[vk].setPointerCapture(e.pointerId);}catch(_){}
+  if(e.button===1||e.button===2||spaceDown){drag={type:'pan',vk,last:[u,v]};svgs[vk].style.cursor='grabbing';return;}
+  if(e.button!==0)return;
+  const t=ui.tool,sp=getP(ui.sel);
+  if(t==='pencil'){drag={type:'draw',vk,pts:[[a,b]],last:[u,v]};return;}
+  if(t==='eraser'){
+    drag={type:'erase',vk,before:snap(),changed:false};
+    if(eraseStrokesAt(vk,u,v))drag.changed=true;
+    else{const hit=piecesAt(vk,u,v)[0];if(hit){st.pieces=st.pieces.filter(x=>x.id!==hit.id);if(ui.sel===hit.id){ui.sel=null;ui.editJoints=false;}drag.changed=true;}}
+    render();return;
+  }
+  if(t==='split'){
+    const own=st.pieces.find(p=>reachable(p)&&splitAt(vk,p,u,v)>=0);
+    if(own){pushHist(snap());removeSplit(own,splitAt(vk,own,u,v));select(own.id);commit();render();toast('Split line removed.');return;}
+    const hit=piecesAt(vk,u,v,0)[0];
+    if(!hit){select(null);render();drag={type:'pan',vk,last:[u,v]};return;}
+    select(hit.id);
+    drag={type:'splitdraw',vk,id:hit.id,u0:u,v0:v,a0:a,b0:b};
+    splitPreview(drag,u,v,e.altKey);render();return;
+  }
+  if(t==='measure'){
+    const target=(sp&&edgeAt(vk,sp,u,v)>=0)?sp:piecesAt(vk,u,v,7).find(p=>edgeAt(vk,p,u,v)>=0);
+    if(target){select(target.id);render();openEdgePop(vk,target,edgeAt(vk,target,u,v),e.clientX,e.clientY);return;}
+    const hit=piecesAt(vk,u,v)[0];
+    if(hit){select(hit.id);render();openSizePop(vk,hit,e.clientX,e.clientY);return;}
+    select(null);render();drag={type:'pan',vk,last:[u,v]};return;
+  }
+  /* select */
+  if(e.shiftKey){const hit=piecesAt(vk,u,v)[0];if(hit){toggleMulti(hit.id);render();}return;}
+  const ji=jointAt(vk,sp,u,v);
+  if(ji>=0){ui.joint=ji;drag={type:'joint',vk,id:sp.id,i:ji,a0:a,b0:b,orig:clone(sp),before:snap(),moved:false};render();return;}
+  const si=splitAt(vk,sp,u,v);
+  if(si>=0){drag={type:'split',vk,id:sp.id,i:si,a0:a,b0:b,orig:clone(sp),before:snap(),moved:false};render();return;}
+  const gh=ghostAt(vk,sp,u,v);
+  if(gh){
+    const before=snap();
+    sp.out[vk].splice(gh.i+1,0,gh.pt.slice());
+    ui.ghost=null;lastDown=null;ui.joint=gh.i+1;
+    drag={type:'joint',vk,id:sp.id,i:gh.i+1,a0:gh.pt[0],b0:gh.pt[1],orig:clone(sp),before,moved:true};
+    render();return;
+  }
+  const et=edgeTarget(vk,u,v);
+  if(et){select(et.p.id);drag={type:'resize',vk,id:et.p.id,e:et.e,a0:a,b0:b,orig:clone(et.p),before:snap(),moved:false};render();return;}
+  const hit=piecesAt(vk,u,v)[0];
+  if(hit){
+    if(!(ui.multi.length>1&&ui.multi.includes(hit.id)))select(hit.id);
+    drag={type:'move',vk,id:hit.id,a0:a,b0:b,orig:clone(hit),movers:moversFor(hit),before:snap(),moved:false};render();return;
+  }
+  select(null);render();
+  drag={type:'pan',vk,last:[u,v]};
+}
+function onMove(vk,e){
+  const [u,v]=local(vk,e);
+  if(!drag||drag.vk!==vk){hover(vk,u,v);return;}
+  if(drag.type==='pan'){const V=VIEWS[vk];ui.o[V.oh]+=u-drag.last[0];ui.o[V.ov]+=v-drag.last[1];drag.last=[u,v];render();return;}
+  const [a,b]=mdl(vk,u,v);
+  if(drag.type==='draw'){if(Math.hypot(u-drag.last[0],v-drag.last[1])>=2){drag.pts.push([a,b]);drag.last=[u,v];updateLive();}return;}
+  if(drag.type==='erase'){if(eraseStrokesAt(vk,u,v)){drag.changed=true;render();}return;}
+  if(drag.type==='move')applyMove(drag,a,b,e.altKey);
+  else if(drag.type==='resize')applyResize(drag,a,b,e.altKey);
+  else if(drag.type==='joint')applyJoint(drag,a,b,e.altKey);
+  else if(drag.type==='split')applySplitDrag(drag,a,b,e.altKey);
+  else if(drag.type==='splitdraw'){splitPreview(drag,u,v,e.altKey);render();return;}
+  drag.moved=true;render();
+}
+function onUp(vk,e){
+  if(!drag)return;
+  const d=drag;drag=null;
+  if(d.type==='draw'){
+    if(d.pts.length>=2){pushHist(snap());st.strokes.push({view:vk,pts:d.pts.map(p=>[r1(p[0]),r1(p[1])])});st.example=false;save();}
+    render();return;
+  }
+  if(d.type==='splitdraw'){
+    const sv=ui.splitPrev;ui.splitPrev=null;ui.guides=[];
+    const p=getP(d.id);
+    if(p&&sv&&sv.ok){pushHist(snap());addSplit(p,sv.axis,sv.val);commit();}
+    else toast('Draw the line across the shape, not along its edge.');
+    render();return;
+  }
+  if(['move','resize','joint','split'].includes(d.type)&&d.moved){
+    if(d.type==='joint'){const p=getP(d.id),P=p.out[d.vk].filter((q,i,A)=>{const n=A[(i+1)%A.length];return !(eq(q[0],n[0])&&eq(q[1],n[1]));});if(P.length>=3&&P.length<p.out[d.vk].length){p.out[d.vk]=P;syncFrom(p,d.vk);}}
+    pushHist(d.before);commit();
+  }
+  if(d.type==='erase'&&d.changed){pushHist(d.before);commit();}
+  ui.guides=[];render();
+  const [u,v]=local(vk,e);hover(vk,u,v);
+}
+function onWheel(vk,e){
+  e.preventDefault();
+  const [u,v]=local(vk,e);
+  const dy=e.deltaMode===1?e.deltaY*16:e.deltaY;
+  const ns=clamp(ui.s*Math.exp(-dy*0.0015),0.05,30);
+  zoomAbout(vk,u,v,ns/ui.s);
+}
+function onDbl(vk,e){
+  const [u,v]=local(vk,e),sp=getP(ui.sel);
+  if(jointsHere(vk,sp)){
+    const P=sp.out[vk],ji=jointAt(vk,sp,u,v);
+    if(ji>=0){
+      if(P.length<=3){toast('A shape needs at least 3 joints.');return;}
+      pushHist(snap());P.splice(ji,1);ui.joint=null;syncFrom(sp,vk);save();render();return;
+    }
+    const ei=edgeAt(vk,sp,u,v);
+    if(ei>=0){
+      const [a,b]=mdl(vk,u,v),q=P[ei],n=P[(ei+1)%P.length];
+      const dx=n[0]-q[0],dy=n[1]-q[1],L=dx*dx+dy*dy,t=clamp(((a-q[0])*dx+(b-q[1])*dy)/(L||1),0,1);
+      pushHist(snap());P.splice(ei+1,0,[r1(q[0]+t*dx),r1(q[1]+t*dy)]);save();render();
+      return;
+    }
+    if(!hits(vk,sp,u,v,2))setJoints(false);
+    return;
+  }
+  const hit=piecesAt(vk,u,v)[0];
+  if(!hit)return;
+  /* double-click a piece with holes to go inside it: its joints and its holes become editable */
+  const drill=!hit.cutOf&&cuttersOf(hit).length>0;
+  if(drill)ui.inside=hit.id;
+  select(hit.id);
+  setJoints(true,vk);
+  if(drill)toast(`Inside ${hit.name}: drag its dots, or click a hole to edit it. Esc to step out.`);
+}
+ORDER.forEach(vk=>{
+  const s=svgs[vk];
+  s.addEventListener('pointerdown',e=>onDown(vk,e));
+  s.addEventListener('pointermove',e=>onMove(vk,e));
+  s.addEventListener('pointerup',e=>onUp(vk,e));
+  s.addEventListener('pointercancel',e=>onUp(vk,e));
+  s.addEventListener('wheel',e=>onWheel(vk,e),{passive:false});
+  s.addEventListener('contextmenu',e=>e.preventDefault());
+  s.addEventListener('pointerleave',()=>{if(!drag&&ui.ghost)setGhost(null);});
+});
+
+/* ---------- size popover ---------- */
+const pop=$('#pop'),popA=$('#popA'),popB=$('#popB');
+function placePop(cx,cy){
+  pop.hidden=false;$('#popErr').textContent='';
+  const pw=pop.offsetWidth,ph=pop.offsetHeight;
+  pop.style.left=clamp(cx+12,8,innerWidth-pw-8)+'px';
+  pop.style.top=clamp(cy+12,8,innerHeight-ph-8)+'px';
+  popA.focus();popA.select();
+}
+function openSizePop(vk,p,cx,cy){
+  const V=VIEWS[vk];
+  Object.assign(pop.dataset,{mode:'size',vk,id:p.id});
+  $('#popTitle').textContent=`${p.name} · overall size in ${V.name}`;
+  $('#popLA').textContent=LABEL[V.h];$('#popLB').textContent=LABEL[V.v];$('#popFB').hidden=false;
+  const a=p.r[V.h],b=p.r[V.v];popA.value=fmtU(a[1]-a[0]);popB.value=fmtU(b[1]-b[0]);
+  placePop(cx,cy);
+}
+function openEdgePop(vk,p,i,cx,cy){
+  Object.assign(pop.dataset,{mode:'edge',vk,id:p.id,i:String(i)});
+  const P=outline(p,vk),q=P[i],n=P[(i+1)%P.length];
+  $('#popTitle').textContent=`${p.name} · edge length`;
+  $('#popLA').textContent='Length';$('#popFB').hidden=true;
+  popA.value=fmtU(Math.hypot(n[0]-q[0],n[1]-q[1]));
+  placePop(cx,cy);
+}
+function closePop(){pop.hidden=true;}
+function applyPop(){
+  const p=getP(pop.dataset.id);if(!p){closePop();return;}
+  const A=inU(parseFloat(popA.value));
+  if(pop.dataset.mode==='edge'){
+    if(!(A>0)){$('#popErr').textContent='Length must be a number above 0.';return;}
+    pushHist(snap());setEdgeLength(p,pop.dataset.vk,+pop.dataset.i,A);
+  }else{
+    const V=VIEWS[pop.dataset.vk],B=inU(parseFloat(popB.value));
+    if(!(A>0)||!(B>0)){$('#popErr').textContent='Sizes must be numbers above 0.';return;}
+    pushHist(snap());
+    setRange(p,V.h,p.r[V.h][0],p.r[V.h][0]+A);
+    setRange(p,V.v,p.r[V.v][0],p.r[V.v][0]+B);
+  }
+  commit();closePop();render();
+}
+$('#popOk').addEventListener('click',applyPop);
+$('#popCancel').addEventListener('click',closePop);
+[popA,popB].forEach(el=>el.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();applyPop();}if(e.key==='Escape'){e.preventDefault();closePop();}}));
+document.addEventListener('pointerdown',e=>{if(!pop.hidden&&!e.composedPath().some(n=>n===pop||(n.tagName&&n.tagName.toLowerCase()==='svg')))closePop();});
+
+/* ---------- sidebar & toolbar ---------- */
+['x','y','z','w','h','d'].forEach(k=>{
+  const el=$('#f-'+k);
+  el.addEventListener('change',()=>{
+    const p=getP(ui.sel);if(!p)return;
+    let v=inU(parseFloat(el.value));
+    if(!isFinite(v)){render();return;}
+    pushHist(snap());
+    if('whd'.includes(k)){const axis={w:'x',h:'y',d:'z'}[k],r=p.r[axis];setRange(p,axis,r[0],r[0]+Math.max(1,v));}
+    else{const dd=r1(v)-p.r[k][0];shift(p,k,dd);for(const m of moversFor(p))shift(getP(m.id),k,dd);}
+    commit();render();
+  });
+  el.addEventListener('keydown',e=>{if(e.key==='Enter')el.blur();});
+});
+$('#f-name').addEventListener('change',()=>{
+  const p=getP(ui.sel);if(!p)return;const n=$('#f-name').value.trim();
+  if(!n||n===p.name){render();return;}
+  if(st.pieces.some(o=>o!==p&&o.name===n)){toast(`${n} is already taken.`);render();return;}
+  pushHist(snap());const old=p.name;p.name=n;
+  for(const c of cuttersOf(p))if(c.name.startsWith(old+'.h'))c.name=n+c.name.slice(old.length);
+  fixNames();save();render();
+});
+$('#f-name').addEventListener('keydown',e=>{if(e.key==='Enter')e.target.blur();});
+$('#delBtn').addEventListener('click',deleteSel);
+$('#modeResize').addEventListener('click',()=>setJoints(false));
+function doCut(){
+  let P=ui.multi.map(getP).filter(Boolean);if(P.length<2)return;
+  /* a merged shape counts as one unit, on either side of the cut */
+  const ids=new Set(P.map(p=>p.id));
+  for(const p of P)if(p.mergeId&&!p.cutOf)for(const m of st.pieces)if(m.mergeId===p.mergeId&&!m.cutOf)ids.add(m.id);
+  P=[...ids].map(getP);
+  const units={};for(const p of P){const k=(!p.cutOf&&p.mergeId)||p.id;(units[k]=units[k]||[]).push(p);}
+  const U=Object.values(units).map(ms=>({ms,vol:ms.reduce((a,m)=>a+vol(m),0)})).sort((a,b)=>b.vol-a.vol);
+  if(U.length<2){toast('Select at least two separate shapes to cut.');return;}
+  const baseU=U[0],base=baseU.ms.slice().sort((a,b)=>vol(b)-vol(a))[0];
+  const cutters=U.slice(1).flatMap(u=>u.ms);
+  /* each cutter belongs to the part of the base it overlaps most */
+  const target=c=>{let best=null,bv=0;for(const m of baseU.ms){if(!overlap3(c,m,-0.05))continue;const v=['x','y','z'].reduce((a,k)=>a*Math.max(0,Math.min(c.r[k][1],m.r[k][1])-Math.max(c.r[k][0],m.r[k][0])),1);if(v>bv){bv=v;best=m;}}return best;};
+  if(!cutters.some(target)){toast(`Nothing to cut: place the shapes over ${base.name} first.`);return;}
+  pushHist(snap());
+  for(const m of baseU.ms)delete m.cutOf;
+  const done=[];
+  for(const c of cutters){
+    const t=target(c);if(!t)continue;
+    for(const h of cuttersOf(c))delete h.cutOf;
+    delete c.mergeId;c.cutOf=t.id;done.push(c);
+  }
+  ui.multi=[];ui.sel=base.id;ui.inside=null;
+  reconcile();fixNames();save();render();
+  const skipped=cutters.filter(c=>!done.includes(c));
+  toast(`Cut ${done.map(c=>c.name).join(', ')} out of ${base.name}${baseU.ms.length>1?' (merged shape)':''}.`+(skipped.length?` ${skipped.map(c=>c.name).join(', ')} didn't overlap, so ${skipped.length>1?'they stay':'it stays'} separate.`:''));
+}
+function doMerge(){
+  const P=ui.multi.map(getP).filter(Boolean);if(P.length<2)return;
+  pushHist(snap());
+  const gid=(P.find(p=>p.mergeId)||{}).mergeId||'g'+newId();
+  for(const p of P){delete p.cutOf;p.mergeId=gid;}
+  ui.multi=[];ui.sel=P[0].id;
+  const rel=reconcile();fixNames();save();render();
+  toast(rel.length?`Merged. ${rel.join(', ')} ${rel.length>1?"don't":"doesn't"} touch the others, so ${rel.length>1?'they stay':'it stays'} separate.`:`Merged ${P.map(p=>p.name).join(' + ')} into one shape.`);
+}
+function release(){
+  const p=getP(ui.sel);if(!p||(!p.cutOf&&!p.mergeId))return;
+  pushHist(snap());const wasHole=!!p.cutOf,old=p.name;delete p.cutOf;delete p.mergeId;ui.inside=null;commit();render();
+  if(wasHole&&p.name!==old)toast(`${old} is a separate piece again, now called ${p.name}.`);
+}
+$('#cutBtn').addEventListener('click',doCut);
+$('#mergeBtn').addEventListener('click',doMerge);
+$('#relBtn').addEventListener('click',release);
+/* ---------- corner radius ---------- */
+let radDrag=false;
+function selJoint(){
+  const p=getP(ui.sel);if(!p||!ui.editJoints||ui.joint===null)return null;
+  const P=p.out[ui.jointView];if(!P||!P[ui.joint])return null;
+  return {p,P,i:ui.joint,q:P[ui.joint]};
+}
+function setRadius(r,all){
+  const J=selJoint();if(!J)return;
+  for(const k of all?J.P.map((_,k)=>k):[J.i]){
+    const q=J.P[k],v=Math.min(Math.max(0,r1(r)),r1(maxRad(J.P,k)));
+    if(v>0)q[2]=v;else q.length=2;
+  }
+}
+function deleteJoint(){
+  const J=selJoint();if(!J)return;
+  if(J.P.length<=3){toast('A shape needs at least 3 joints.');return;}
+  pushHist(snap());J.P.splice(J.i,1);ui.joint=null;syncFrom(J.p,ui.jointView);save();render();
+}
+$('#f-rad').addEventListener('change',e=>{const v=inU(parseFloat(e.target.value));if(!isFinite(v)||!selJoint()){render();return;}pushHist(snap());setRadius(v,false);save();render();});
+$('#f-rad').addEventListener('keydown',e=>{if(e.key==='Enter')e.target.blur();});
+$('#f-radr').addEventListener('input',e=>{if(!selJoint())return;if(!radDrag){pushHist(snap());radDrag=true;}setRadius(+e.target.value,false);render();});
+$('#f-radr').addEventListener('change',()=>{radDrag=false;save();render();});
+$('#radAll').addEventListener('click',()=>{const J=selJoint();if(!J)return;pushHist(snap());setRadius(J.q[2]>0?J.q[2]:Math.max(...J.P.map((_,k)=>maxRad(J.P,k))),true);save();render();toast('All corners rounded.');});
+$('#radNone').addEventListener('click',()=>{if(!selJoint())return;pushHist(snap());setRadius(0,true);save();render();});
+$('#modeJoints').addEventListener('click',()=>setJoints(true));
+$('#list').addEventListener('click',e=>{const btn=e.target.closest('button[data-id]');if(!btn)return;const lp=getP(btn.dataset.id);if(lp&&lp.cutOf)ui.inside=lp.cutOf;if(e.shiftKey){toggleMulti(btn.dataset.id);render();return;}select(btn.dataset.id);if(ui.tool==='pencil'||ui.tool==='eraser')ui.tool='select';render();});
+$('#defDepth').addEventListener('change',e=>{const v=inU(parseFloat(e.target.value));if(v>0)st.defDepth=r1(v);save();render();});
+$('#gridSel').addEventListener('change',e=>{st.grid=+e.target.value;save();});
+function setUnit(u){st.unit=u;save();render();}
+$('#unitMM').addEventListener('click',()=>setUnit('mm'));
+$('#unitCM').addEventListener('click',()=>setUnit('cm'));
+/* settings live in a dropdown under the units tag next to the title */
+const menu=$('#settingsMenu');
+function toggleMenu(open){menu.hidden=!(open===undefined?menu.hidden:open);if(!menu.hidden){$('#prPaper').value=st.paper||'a4';$('#prLine').value=st.lineWt||0.5;if(document.activeElement!==$('#prGrow'))$('#prGrow').value=st.grow==null?15:st.grow;}$('#unitTag').setAttribute('aria-expanded',String(!menu.hidden));}
+$('#unitTag').addEventListener('click',e=>{e.stopPropagation();toggleMenu();});
+document.addEventListener('pointerdown',e=>{if(!menu.hidden&&!e.composedPath().some(n=>n===menu||n===$('#unitTag')))toggleMenu(false);});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!menu.hidden){e.stopImmediatePropagation();toggleMenu(false);$('#unitTag').focus();}},true);
+$('#snapChk').addEventListener('change',e=>{st.snap=e.target.checked;save();});
+document.querySelectorAll('[data-tool]').forEach(b=>b.addEventListener('click',()=>setTool(b.dataset.tool)));
+$('#cleanBtn').addEventListener('click',cleanup);
+$('#fitBtn').addEventListener('click',fit);
+$('#addBtn').addEventListener('click',()=>{
+  pushHist(snap());
+  const maxX=st.pieces.reduce((m,p)=>Math.max(m,p.r.x[1]),-20);
+  const x=st.pieces.length?maxX+20:0;
+  const p={id:newId(),name:nextName(),r:{x:[x,x+100],y:[0,100],z:[0,100]},out:{}};
+  st.pieces.push(p);leaveJoints();ui.sel=p.id;ui.tool='select';save();fit();
+});
+const eMenu=$('#eraseMenu'),eMore=$('#eraseMore');
+function toggleErase(open){eMenu.hidden=!(open===undefined?eMenu.hidden:open);eMore.setAttribute('aria-expanded',String(!eMenu.hidden));}
+eMore.addEventListener('click',e=>{e.stopPropagation();toggleErase();});
+document.addEventListener('pointerdown',e=>{if(!eMenu.hidden&&!e.composedPath().some(n=>n===eMenu||n===eMore))toggleErase(false);});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!eMenu.hidden){e.stopImmediatePropagation();toggleErase(false);eMore.focus();}},true);
+$('#clearBtn').addEventListener('click',()=>toggleErase(false));
+$('#clearBtn').addEventListener('click',()=>{
+  if(!st.pieces.length&&!st.strokes.length)return;
+  pushHist(snap());st.pieces=[];st.strokes=[];st.example=false;ui.sel=null;ui.editJoints=false;save();render();
+  toast('Cleared. Press Undo to bring it back.');
+});
+
+document.addEventListener('keydown',e=>{
+  if(e.target.matches('input,select,textarea')||e.target.isContentEditable)return;
+  /* on Home only Undo works: it brings back the drawing you just left */
+  if(st.home){if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='z'&&!e.shiftKey&&hist.length){e.preventDefault();leaveHome();undo();}return;}
+  if(!$('#printer').hidden||!$('#askSave').hidden)return;
+  const k=e.key.toLowerCase();
+  if((e.metaKey||e.ctrlKey)&&k==='z'){e.preventDefault();e.shiftKey?redo():undo();return;}
+  if((e.metaKey||e.ctrlKey)&&k==='y'){e.preventDefault();redo();return;}
+  if(e.metaKey||e.ctrlKey||e.altKey)return;
+  if(e.code==='Space'){e.preventDefault();spaceDown=true;return;}
+  if(k==='p')setTool('pencil');
+  else if(k==='v')setTool('select');
+  else if(k==='m')setTool('measure');
+  else if(k==='e')setTool('eraser');
+  else if(k==='s')setTool('split');
+  else if(k==='c')cleanup();
+  else if(k==='b')$('#addBtn').click();
+  else if(k==='f')fit();
+  else if(k==='enter'){if(!e.target.closest('button')&&getP(ui.sel))setJoints(!ui.editJoints);}
+  else if(k==='delete'||k==='backspace'){e.preventDefault();if(ui.editJoints&&ui.joint!==null)deleteJoint();else deleteSel();}
+  else if(k==='escape'){
+    const p=getP(ui.sel);
+    if(ui.editJoints)setJoints(false);
+    else if(p&&p.cutOf&&ui.inside===p.cutOf){select(p.cutOf);ui.inside=null;closePop();render();}
+    else{ui.sel=null;ui.multi=[];ui.inside=null;closePop();render();}
+  }
+});
+document.addEventListener('keyup',e=>{if(e.code==='Space')spaceDown=false;});
+/* a click anywhere outside the views ends a possible double-click */
+document.addEventListener('pointerdown',e=>{if(!e.composedPath().some(n=>n.tagName&&n.tagName.toLowerCase()==='svg'&&n.id&&n.id.startsWith('v-')))lastDown=null;},true);
+
+let toastT;
+function toast(msg){const t=$('#toast');t.textContent=msg;t.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),4200);}
+
+/* ---------- example: a rough stool sketched in the side view ---------- */
+function mulberry(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+function roughPoly(corners,seed){
+  const r=mulberry(seed),J=()=>(r()-0.5)*5;
+  const c=corners.map(p=>[p[0]+J(),p[1]+J()]);c.push([c[0][0]+(c[1][0]-c[0][0])*0.06,c[0][1]+(c[1][1]-c[0][1])*0.06]);
+  const pts=[];
+  for(let i=0;i<c.length-1;i++){
+    const [x0,y0]=c[i],[x1,y1]=c[i+1],n=Math.max(4,Math.round(Math.hypot(x1-x0,y1-y0)/12)),bow=(r()-0.5)*4;
+    for(let j=0;j<n;j++){const t=j/n,s=Math.sin(t*Math.PI)*bow,nx=-(y1-y0),ny=(x1-x0),L=Math.hypot(nx,ny)||1;pts.push([r1(x0+(x1-x0)*t+nx/L*s),r1(y0+(y1-y0)*t+ny/L*s)]);}
+  }
+  pts.push(c[c.length-1].map(r1));
+  return {view:'side',pts};
+}
+/* seat with splayed legs: slanted edges show that clean up keeps angles */
+function exampleStrokes(){return [
+  roughPoly([[0,420],[300,420],[300,460],[0,460]],7),
+  roughPoly([[0,0],[40,0],[110,420],[70,420]],11),
+  roughPoly([[260,0],[300,0],[230,420],[190,420]],19)
+];}
+
+/* ---------- 3D preview ----------
+   Each outline is pushed through its depth (an extrusion). A piece shaped in several views is what those
+   extrusions share (intersection); its holes are subtracted. Solid modelling uses a small BSP-tree CSG. */
+const CSG=(()=>{
+  const EPS=1e-5;
+  const sub=(a,b)=>[a[0]-b[0],a[1]-b[1],a[2]-b[2]],dot=(a,b)=>a[0]*b[0]+a[1]*b[1]+a[2]*b[2];
+  const lerp=(a,b,t)=>[a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t,a[2]+(b[2]-a[2])*t];
+  class Plane{
+    constructor(n,w){this.n=n;this.w=w;}
+    clone(){return new Plane(this.n.slice(),this.w);}
+    flip(){this.n=this.n.map(v=>-v);this.w=-this.w;}
+    static of(v){
+      let nx=0,ny=0,nz=0;
+      for(let i=0;i<v.length;i++){const a=v[i],b=v[(i+1)%v.length];nx+=(a[1]-b[1])*(a[2]+b[2]);ny+=(a[2]-b[2])*(a[0]+b[0]);nz+=(a[0]-b[0])*(a[1]+b[1]);}
+      const l=Math.hypot(nx,ny,nz);if(l<1e-9)return null;
+      const n=[nx/l,ny/l,nz/l];return new Plane(n,dot(n,v[0]));
+    }
+    split(poly,cf,cb,f,b){
+      let all=0;
+      const ts=poly.v.map(v=>{const t=dot(this.n,v)-this.w,ty=t<-EPS?2:t>EPS?1:0;all|=ty;return ty;});
+      if(all===0)(dot(this.n,poly.p.n)>0?cf:cb).push(poly);
+      else if(all===1)f.push(poly);
+      else if(all===2)b.push(poly);
+      else{
+        const F=[],B=[],n=poly.v.length;
+        for(let i=0;i<n;i++){
+          const j=(i+1)%n,ti=ts[i],tj=ts[j],vi=poly.v[i],vj=poly.v[j];
+          if(ti!==2)F.push(vi);
+          if(ti!==1)B.push(vi);
+          if((ti|tj)===3){const v=lerp(vi,vj,(this.w-dot(this.n,vi))/dot(this.n,sub(vj,vi)));F.push(v);B.push(v);}
+        }
+        if(F.length>=3)f.push(new Poly(F,poly.p,poly.g));
+        if(B.length>=3)b.push(new Poly(B,poly.p,poly.g));
+      }
+    }
+  }
+  /* g: which drawn face a piece of surface came from (kept through cuts, used when laying slabs flat) */
+  class Poly{
+    constructor(v,p,g){this.v=v;this.p=p;this.g=g;}
+    clone(){return new Poly(this.v.slice(),this.p.clone(),this.g);}
+    flip(){this.v=this.v.slice().reverse();this.p=this.p.clone();this.p.flip();}
+  }
+  class Node{
+    constructor(ps){this.pl=null;this.f=null;this.b=null;this.ps=[];if(ps)this.build(ps);}
+    invert(){for(const p of this.ps)p.flip();if(this.pl)this.pl.flip();if(this.f)this.f.invert();if(this.b)this.b.invert();const t=this.f;this.f=this.b;this.b=t;}
+    clip(ps){
+      if(!this.pl)return ps.slice();
+      let f=[],b=[];for(const p of ps)this.pl.split(p,f,b,f,b);
+      if(this.f)f=this.f.clip(f);
+      b=this.b?this.b.clip(b):[];
+      return f.concat(b);
+    }
+    clipTo(n){this.ps=n.clip(this.ps);if(this.f)this.f.clipTo(n);if(this.b)this.b.clipTo(n);}
+    all(){let r=this.ps.slice();if(this.f)r=r.concat(this.f.all());if(this.b)r=r.concat(this.b.all());return r;}
+    build(ps){
+      if(!ps.length)return;
+      if(!this.pl)this.pl=ps[0].p.clone();
+      const f=[],b=[];for(const p of ps)this.pl.split(p,this.ps,this.ps,f,b);
+      if(f.length){if(!this.f)this.f=new Node();this.f.build(f);}
+      if(b.length){if(!this.b)this.b=new Node();this.b.build(b);}
+    }
+  }
+  const cl=ps=>ps.map(p=>p.clone());
+  return {
+    /* a face from its corners; flipped if needed so it points along `out` (outward) */
+    face(v,out,g){let p=Plane.of(v);if(!p)return null;if(out&&dot(p.n,out)<0){v=v.slice().reverse();p=Plane.of(v);}return new Poly(v,p,g);},
+    _node(ps){return new Node(cl(ps));},
+    subtract(a,b){const A=new Node(cl(a)),B=new Node(cl(b));A.invert();A.clipTo(B);B.clipTo(A);B.invert();B.clipTo(A);B.invert();A.build(B.all());A.invert();return A.all();},
+    intersect(a,b){const A=new Node(cl(a)),B=new Node(cl(b));A.invert();B.clipTo(A);B.invert();A.clipTo(B);B.clipTo(A);A.build(B.all());A.invert();return A.all();}
+  };
+})();
+
+/* view coords (a, b, depth) -> three.js space (X right, Y up, Z toward the viewer of the Front view) */
+const TO3={front:(a,b,d)=>[a,b,-d],side:(a,b,d)=>[d,b,-a],top:(a,b,d)=>[a,d,-b]};
+/* an outline as a plain polygon: rounded corners become short straight runs */
+function flatOutline(P){
+  const n=P.length,out=[];
+  for(let i=0;i<n;i++){
+    const B=P[i],f=B[2]>0?fillet(P[(i-1+n)%n],B,P[(i+1)%n],B[2]):null;
+    if(!f){out.push([B[0],B[1]]);continue;}
+    const seg=10;
+    for(let k=0;k<=seg;k++){const t=k/seg,m=1-t,w=[m*m*m,3*m*m*t,3*m*t*t,t*t*t];out.push([0,1].map(j=>w[0]*f.p1[j]+w[1]*f.c1[j]+w[2]*f.c2[j]+w[3]*f.p2[j]));}
+  }
+  const q=out.filter((p,i)=>{const n2=out[(i+1)%out.length];return Math.hypot(p[0]-n2[0],p[1]-n2[1])>1e-6;});
+  if(polyArea(q)<0)q.reverse();
+  return q;
+}
+function extrude(vk,P,d0,d1){
+  const M=TO3[vk],o=M(0,0,0),dir=v=>[v[0]-o[0],v[1]-o[1],v[2]-o[2]],fs=[];
+  const up=dir(M(0,0,1)),down=up.map(v=>-v);
+  for(let i=0;i<P.length;i++){
+    const p=P[i],q=P[(i+1)%P.length];
+    const f=CSG.face([M(p[0],p[1],d0),M(q[0],q[1],d0),M(q[0],q[1],d1),M(p[0],p[1],d1)],dir(M(q[1]-p[1],-(q[0]-p[0]),0)));
+    if(f)fs.push(f);
+  }
+  const tris=THREE.ShapeUtils.triangulateShape(P.map(p=>new THREE.Vector2(p[0],p[1])),[]);
+  for(const t of tris){
+    const a=CSG.face(t.map(i=>M(P[i][0],P[i][1],d1)),up);if(a)fs.push(a);
+    const b=CSG.face(t.map(i=>M(P[i][0],P[i][1],d0)),down);if(b)fs.push(b);
+  }
+  return fs;
+}
+/* where a horizontal line at height y crosses an outline: its leftmost and rightmost points */
+function extentAt(P,y){
+  let lo=Infinity,hi=-Infinity;
+  for(let i=0;i<P.length;i++){
+    const a=P[i],b=P[(i+1)%P.length];
+    if(y<Math.min(a[1],b[1])-1e-7||y>Math.max(a[1],b[1])+1e-7)continue;
+    if(Math.abs(b[1]-a[1])<1e-9){lo=Math.min(lo,a[0],b[0]);hi=Math.max(hi,a[0],b[0]);}
+    else{const x=a[0]+(y-a[1])/(b[1]-a[1])*(b[0]-a[0]);lo=Math.min(lo,x);hi=Math.max(hi,x);}
+  }
+  return hi>=lo?[lo,hi]:null; /* a single point is fine: the shape comes to a tip there */
+}
+/* Top gives the cross-section; Front and Side give its width and depth at every height (like a turned or thrown pot).
+   The cross-section is stretched to fit, level by level, and the levels are joined into one surface. */
+/* The pottery rule (Top is the cross-section, stretched to the Front/Side profile at each height) suits round or
+   many-sided bodies. Straight-edged pieces with few sides (a spout, a wedge) are read as one solid with flat faces:
+   what all three views share. */
+/* corners that really turn (a joint sitting on a straight edge, like the ones a split line adds, doesn't count) */
+const corners=P=>P.filter((q,i)=>{const a=P[(i-1+P.length)%P.length],b=P[(i+1)%P.length];return q[2]>0||Math.abs((q[0]-a[0])*(b[1]-a[1])-(q[1]-a[1])*(b[0]-a[0]))>=0.5*Math.hypot(b[0]-a[0],b[1]-a[1]);}).length;
+const isLoft=p=>!!(p.out.top&&(p.out.front||p.out.side)&&(p.out.top.some(q=>q[2]>0)||corners(p.out.top)>=5));
+/* the horizontal slices of a lofted piece: at height y, the Top shape stretched to the width (Front) and depth (Side) found there.
+   `raw` uses only the heights where Front or Side have a joint (the rings shown in the Top view). */
+function loftSections(p,raw){
+  const T=flatOutline(p.out.top),F=p.out.front?flatOutline(p.out.front):null,S=p.out.side?flatOutline(p.out.side):null;
+  if(T.length<3)return {T,secs:[]};
+  const [x0,z0,x1,z1]=bboxOf(T),W=x1-x0||1,D=z1-z0||1,cx=(x0+x1)/2,cz=(z0+z1)/2;
+  const [y0,y1]=p.r.y;
+  const src=raw?[...(p.out.front||[]),...(p.out.side||[])]:[...(F||[]),...(S||[])];
+  const ys=[...new Set([y0,y1,...src.map(q=>q[1])].filter(y=>y>=y0-1e-6&&y<=y1+1e-6).map(y=>Math.round(y*1000)/1000))].sort((a,b)=>a-b);
+  const secs=[];
+  for(const y of ys){
+    let fx=F?extentAt(F,y):null,sz=S?extentAt(S,y):null;
+    if(F&&!fx||S&&!sz)continue;
+    if(!fx){const r=(sz[1]-sz[0])/D;fx=[cx-W/2*r,cx+W/2*r];}
+    if(!sz){const r=(fx[1]-fx[0])/W;sz=[cz-D/2*r,cz+D/2*r];}
+    secs.push({y,fx,sz,full:eq(fx[0],x0)&&eq(fx[1],x1)&&eq(sz[0],z0)&&eq(sz[1],z1),pts:T.map(([x,z])=>[fx[0]+(x-x0)/W*(fx[1]-fx[0]),sz[0]+(z-z0)/D*(sz[1]-sz[0])])});
+  }
+  return {T,secs};
+}
+function loftSolid(p,grow){
+  const {T,secs}=loftSections(p,false);
+  if(T.length<3)return [];
+  const rings=secs.map(s=>s.pts.map(([x,z])=>[x,s.y,-z]));
+  if(rings.length<2)return [];
+  if(grow){const a=rings[0].map(v=>[v[0],v[1]-0.05,v[2]]),b=rings[rings.length-1].map(v=>[v[0],v[1]+0.05,v[2]]);rings.unshift(a);rings.push(b);}
+  const fs=[],n=T.length;
+  for(let k=0;k<rings.length-1;k++){
+    const A=rings[k],B=rings[k+1];
+    const c=[0,1,2].map(j=>(A.reduce((s,v)=>s+v[j],0)+B.reduce((s,v)=>s+v[j],0))/(2*n));
+    for(let i=0;i<n;i++){
+      const a0=A[i],a1=A[(i+1)%n],b0=B[i],b1=B[(i+1)%n];
+      const m=[(a0[0]+a1[0]+b0[0]+b1[0])/4-c[0],0,(a0[2]+a1[2]+b0[2]+b1[2])/4-c[2]];
+      const g='q'+k+'_'+i,t1=CSG.face([a0,a1,b1],m,g),t2=CSG.face([a0,b1,b0],m,g);
+      if(t1)fs.push(t1);if(t2)fs.push(t2);
+    }
+  }
+  const tris=THREE.ShapeUtils.triangulateShape(T.map(q=>new THREE.Vector2(q[0],q[1])),[]);
+  const top=rings[rings.length-1],bot=rings[0];
+  for(const t of tris){
+    const a=CSG.face(t.map(i=>top[i]),[0,1,0]);if(a)fs.push(a);
+    const b=CSG.face(t.map(i=>bot[i]),[0,-1,0]);if(b)fs.push(b);
+  }
+  return fs;
+}
+/* the solid of one piece; `grow` pushes it a hair past its ends so cuts open cleanly */
+function solidOf(p,grow){
+  if(isLoft(p))return loftSolid(p,grow);
+  let views=shaped(p);
+  if(!views.length)views=['front'];
+  const e=views.length>1||grow?0.05:0;
+  let s=null;
+  for(const vk of views){
+    const D=DEPTH[vk][0];let P=flatOutline(outline(p,vk));
+    if(P.length<3)continue;
+    /* a hole reaches a hair past every side, so a face that lines up exactly with the piece still gets cut open */
+    if(grow)P=offsetPoly(P,-0.05)||P;
+    const x=extrude(vk,P,p.r[D][0]-e,p.r[D][1]+e);
+    s=s?CSG.intersect(s,x):x;
+  }
+  return s||[];
+}
+
+/* outline edges of a solid: the borders of each flat face, skipping seams inside one face (left by cutting)
+   and soft seams between nearly-parallel facets (the sides of a rounded hole) */
+function featureEdges(polys){
+  const R=v=>Math.round(v*1000)/1000,K=p=>p.map(R).join(',');
+  const groups=new Map();
+  for(const f of polys){const k=f.p.n.map(v=>Math.round(v*1e4)).join(',')+'|'+Math.round(f.p.w*100);(groups.get(k)||groups.set(k,{n:f.p.n,fs:[]}).get(k)).fs.push(f);}
+  const owner=new Map();
+  for(const g of groups.values()){
+    const pts=[];for(const f of g.fs)for(const v of f.v)pts.push(v);
+    const dir=new Map();
+    for(const f of g.fs)for(let i=0;i<f.v.length;i++){
+      const a=f.v[i],b=f.v[(i+1)%f.v.length],d=[b[0]-a[0],b[1]-a[1],b[2]-a[2]],L2=d[0]*d[0]+d[1]*d[1]+d[2]*d[2];if(L2<1e-10)continue;
+      /* split at any point of this face that lies on the edge (T-junctions) */
+      const ts=[0,1];
+      for(const p of pts){const t=((p[0]-a[0])*d[0]+(p[1]-a[1])*d[1]+(p[2]-a[2])*d[2])/L2;if(t<=1e-6||t>=1-1e-6)continue;const q=[a[0]+d[0]*t-p[0],a[1]+d[1]*t-p[1],a[2]+d[2]*t-p[2]];if(q[0]*q[0]+q[1]*q[1]+q[2]*q[2]<1e-6)ts.push(t);}
+      ts.sort((x,y)=>x-y);
+      for(let j=0;j<ts.length-1;j++){
+        if(ts[j+1]-ts[j]<1e-6)continue;
+        const p0=[a[0]+d[0]*ts[j],a[1]+d[1]*ts[j],a[2]+d[2]*ts[j]],p1=[a[0]+d[0]*ts[j+1],a[1]+d[1]*ts[j+1],a[2]+d[2]*ts[j+1]];
+        const fk=K(p0)+'>'+K(p1),bk=K(p1)+'>'+K(p0);
+        if(dir.has(bk))dir.delete(bk);else dir.set(fk,[p0,p1]);
+      }
+    }
+    for(const [,e] of dir){const u=[K(e[0]),K(e[1])].sort().join('|');(owner.get(u)||owner.set(u,{e,ns:[]}).get(u)).ns.push(g.n);}
+  }
+  const out=[];
+  for(const {e,ns} of owner.values()){
+    const sharp=ns.length<2||ns.some(n=>ns.some(m=>n[0]*m[0]+n[1]*m[1]+n[2]*m[2]<0.9));
+    if(sharp)out.push(...e[0],...e[1]);
+  }
+  return out;
+}
+const V3={ready:false,meshes:new Map(),pending:false,fitted:false};
+function init3D(){
+  const host=$('#v3d');
+  if(!window.THREE||!THREE.OrbitControls){$('#v3dMsg').hidden=false;return;}
+  try{
+    const r=new THREE.WebGLRenderer({antialias:true,alpha:true});
+    r.setPixelRatio(Math.min(2,window.devicePixelRatio||1));
+    host.appendChild(r.domElement);
+    const scene=new THREE.Scene(),cam=new THREE.PerspectiveCamera(35,1,1,100000);
+    scene.add(new THREE.HemisphereLight(0xffffff,0x8d98a3,0.6));
+    const sun=new THREE.DirectionalLight(0xffffff,0.62);sun.position.set(0.6,1,0.8);scene.add(sun);
+    const fill=new THREE.DirectionalLight(0xffffff,0.25);fill.position.set(-0.8,0.3,-0.5);scene.add(fill);
+    const ctl=new THREE.OrbitControls(cam,r.domElement);
+    ctl.enableDamping=false;ctl.screenSpacePanning=true;
+    ctl.addEventListener('change',()=>draw3D());
+    const ground=new THREE.Group();scene.add(ground);
+    Object.assign(V3,{ready:true,r,scene,cam,ctl,ground,host});
+    new ResizeObserver(()=>{size3D();draw3D();}).observe(host);
+    /* click (without dragging) a piece in 3D to select it */
+    let down=null;
+    r.domElement.addEventListener('pointerdown',e=>{down=[e.clientX,e.clientY];});
+    r.domElement.addEventListener('pointerup',e=>{
+      if(!down||Math.hypot(e.clientX-down[0],e.clientY-down[1])>4)return;
+      const b=r.domElement.getBoundingClientRect();
+      const ray=new THREE.Raycaster();ray.setFromCamera(new THREE.Vector2((e.clientX-b.left)/b.width*2-1,-(e.clientY-b.top)/b.height*2+1),cam);
+      const hit=ray.intersectObjects([...V3.meshes.values()].map(m=>m.mesh))[0];
+      select(hit?hit.object.userData.id:null);render();
+    });
+    size3D();
+  }catch(err){$('#v3dMsg').hidden=false;V3.ready=false;}
+}
+function size3D(){const b=V3.host.getBoundingClientRect();if(b.width<10||b.height<10)return;V3.r.setSize(b.width,b.height,false);V3.r.domElement.style.width='100%';V3.r.domElement.style.height='100%';V3.cam.aspect=b.width/b.height;V3.cam.updateProjectionMatrix();}
+function draw3D(){if(V3.ready)V3.r.render(V3.scene,V3.cam);}
+const cssVar=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+/* three.js reads hex/rgb only; Clay colours are oklch() or color-mix(), so paint one pixel and read it back */
+const hexOf=(()=>{let c=null;return v=>{if(!v)return '';try{c=c||document.createElement('canvas').getContext('2d',{willReadFrequently:true});c.clearRect(0,0,1,1);c.fillStyle='#000';c.fillStyle=v;c.fillRect(0,0,1,1);const d=c.getImageData(0,0,1,1).data;return '#'+[d[0],d[1],d[2]].map(x=>x.toString(16).padStart(2,'0')).join('');}catch(e){return '';}};})();
+function fit3D(){
+  const solids=st.pieces.filter(p=>!p.cutOf);
+  if(!solids.length){V3.cam.position.set(300,250,400);V3.ctl.target.set(50,50,-50);V3.ctl.update();return;}
+  const lo=[Infinity,Infinity,Infinity],hi=[-Infinity,-Infinity,-Infinity];
+  for(const p of solids){const a=[p.r.x[0],p.r.y[0],-p.r.z[1]],b=[p.r.x[1],p.r.y[1],-p.r.z[0]];for(let k=0;k<3;k++){lo[k]=Math.min(lo[k],a[k]);hi[k]=Math.max(hi[k],b[k]);}}
+  const c=lo.map((v,k)=>(v+hi[k])/2),size=Math.max(...hi.map((v,k)=>v-lo[k]),20);
+  const d=size*3.1,dir=new THREE.Vector3(0.95,0.7,1.2).normalize();
+  V3.ctl.target.set(c[0],c[1],c[2]);
+  V3.cam.position.set(c[0]+dir.x*d,c[1]+dir.y*d,c[2]+dir.z*d);
+  V3.cam.near=size/50;V3.cam.far=size*200;V3.cam.updateProjectionMatrix();
+  V3.ctl.update();
+}
+/* rebuilt at most once per frame; each piece is only recomputed when it (or one of its holes) changed */
+function schedule3D(){if(!V3.ready||V3.pending)return;V3.pending=true;requestAnimationFrame(()=>{V3.pending=false;update3D();});}
+function update3D(){
+  const clay=new THREE.Color(hexOf(cssVar('--clay'))||'#d8b39a'),sel=new THREE.Color(hexOf(cssVar('--accent'))||'#0b5fd0'),ink=new THREE.Color(hexOf(cssVar('--ink'))||'#1a2b3c');
+  const seen=new Set();
+  for(const p of st.pieces.filter(q=>!q.cutOf)){
+    seen.add(p.id);
+    const cuts=cuttersOf(p);
+    const key=JSON.stringify([p.r,p.out,cuts.map(c=>[c.r,c.out])]);
+    let m=V3.meshes.get(p.id);
+    if(!m||m.key!==key){
+      if(m){V3.scene.remove(m.mesh);V3.scene.remove(m.lines);m.mesh.geometry.dispose();m.lines.geometry.dispose();}
+      let polys=solidOf(p,false);
+      for(const c of cuts)polys=CSG.subtract(polys,solidOf(c,true));
+      const pos=[],nor=[];
+      for(const f of polys)for(let i=1;i<f.v.length-1;i++)for(const v of [f.v[0],f.v[i],f.v[i+1]]){pos.push(v[0],v[1],v[2]);nor.push(f.p.n[0],f.p.n[1],f.p.n[2]);}
+      const g=new THREE.BufferGeometry();
+      g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));g.setAttribute('normal',new THREE.Float32BufferAttribute(nor,3));
+      const mesh=new THREE.Mesh(g,new THREE.MeshStandardMaterial({color:clay,roughness:0.9,metalness:0,polygonOffset:true,polygonOffsetFactor:1,polygonOffsetUnits:1}));
+      mesh.userData.id=p.id;
+      const eg=new THREE.BufferGeometry();eg.setAttribute('position',new THREE.Float32BufferAttribute(featureEdges(polys),3));
+      const lines=new THREE.LineSegments(eg,new THREE.LineBasicMaterial({color:ink,transparent:true,opacity:0.6}));
+      V3.scene.add(mesh);V3.scene.add(lines);
+      m={key,mesh,lines};V3.meshes.set(p.id,m);
+    }
+    const on=isSel(p)||cuts.some(isSel)||(p.mergeId&&st.pieces.some(o=>o.mergeId===p.mergeId&&isSel(o)));
+    m.mesh.material.color.copy(on?clay.clone().lerp(sel,0.3):clay);
+    m.lines.material.color.copy(on?sel:ink);
+  }
+  for(const [id,m] of V3.meshes)if(!seen.has(id)){V3.scene.remove(m.mesh);V3.scene.remove(m.lines);m.mesh.geometry.dispose();m.lines.geometry.dispose();V3.meshes.delete(id);}
+  /* a faint floor grid at height 0, sized to the object */
+  V3.ground.clear();
+  const solids=st.pieces.filter(p=>!p.cutOf);
+  if(solids.length){
+    const span=Math.max(...solids.map(p=>Math.max(p.r.x[1],p.r.z[1])),...solids.map(p=>-Math.min(p.r.x[0],p.r.z[0])),100);
+    const step=st.grid*10>=span/4?st.grid:10*Math.ceil(span/200),n=Math.ceil(span*1.4/step)*2;
+    const gh=new THREE.GridHelper(n*step,n,new THREE.Color(hexOf(cssVar('--grid-major'))||'#d0d8e1'),new THREE.Color(hexOf(cssVar('--grid'))||'#e7ecf1'));
+    const cx=(Math.min(...solids.map(p=>p.r.x[0]))+Math.max(...solids.map(p=>p.r.x[1])))/2,cz=-(Math.min(...solids.map(p=>p.r.z[0]))+Math.max(...solids.map(p=>p.r.z[1])))/2;
+    gh.position.set(Math.round(cx/step)*step,0,Math.round(cz/step)*step);
+    V3.ground.add(gh);
+  }
+  if(!V3.fitted&&solids.length){fit3D();V3.fitted=true;}
+  draw3D();
+}
+
+/* ---------- slab templates ----------
+   Each piece is laid flat face by face, at the size drawn (no thickness adjustment).
+   Thin pieces (a handle, a fin) are one slab cut to their outline. */
+CSG.outside=(surface,solid)=>{
+  if(!solid.length)return surface;
+  const N=CSG._node(solid);return N.clip(surface.map(p=>p.clone()));
+};
+/* move a counter-clockwise outline inward by d; null if it would collapse */
+function offsetPoly(P,d){
+  const L=[];
+  for(let i=0;i<P.length;i++){
+    const a=P[i],b=P[(i+1)%P.length],dx=b[0]-a[0],dy=b[1]-a[1],l=Math.hypot(dx,dy);
+    if(l<1e-9)continue;
+    L.push({x:a[0]-dy/l*d,y:a[1]+dx/l*d,dx,dy});
+  }
+  if(L.length<3)return null;
+  const out=L.map((l2,i)=>{
+    const l1=L[(i-1+L.length)%L.length],cr=l1.dx*l2.dy-l1.dy*l2.dx;
+    if(Math.abs(cr)<1e-9)return [l2.x,l2.y];
+    const t=((l2.x-l1.x)*l2.dy-(l2.y-l1.y)*l2.dx)/cr;
+    return [l1.x+l1.dx*t,l1.y+l1.dy*t];
+  });
+  return polyArea(out)>1?out:null;
+}
+function midPiece(p,t){
+  const h=t/2,q={id:p.id,name:p.name,r:{},out:{}};
+  for(const a of ['x','y','z']){const [lo,hi]=p.r[a];if(hi-lo<=t+0.5)return null;q.r[a]=[lo+h,hi-h];}
+  const loft=isLoft(p);
+  for(const vk of shaped(p)){
+    const F=flatOutline(p.out[vk]);
+    if(loft&&vk==='top'){q.out.top=F;continue;}
+    const o=offsetPoly(F,h);if(!o)return null;
+    q.out[vk]=o;
+  }
+  return q;
+}
+const THIN_VIEW={z:'front',x:'side',y:'top'};
+function flatSlab(p,axis){
+  const vk=THIN_VIEW[axis],loops=[flatOutline(outline(p,vk))];
+  for(const c of cuttersOf(p))if(c.r[axis][0]<=p.r[axis][0]+0.05&&c.r[axis][1]>=p.r[axis][1]-0.05)loops.push(flatOutline(outline(c,vk)));
+  return [{piece:p.name,part:'one slab',loops}];
+}
+
+/* lay a surface (CSG faces) out flat: weld it, split edges at T-junctions, group smooth neighbours, unfold each group */
+function unfoldSurface(polys,t){
+  const K=v=>Math.round(v[0]*1000)+','+Math.round(v[1]*1000)+','+Math.round(v[2]*1000);
+  const ids=new Map(),VP=[];
+  const id=v=>{const k=K(v);let i=ids.get(k);if(i===undefined){i=VP.length;ids.set(k,i);VP.push(v);}return i;};
+  let F=polys.map((f,i)=>({ids:f.v.map(id),n:f.p.n,g:f.g!=null?f.g:'f'+i}));
+  F=F.map(f=>({ids:f.ids.filter((x,i,a)=>x!==a[(i+1)%a.length]),n:f.n,g:f.g})).filter(f=>f.ids.length>=3);
+  const C=12,G=new Map(),cell=(x,y,z)=>x+'|'+y+'|'+z;
+  VP.forEach((v,i)=>{const k=cell(Math.floor(v[0]/C),Math.floor(v[1]/C),Math.floor(v[2]/C));(G.get(k)||G.set(k,[]).get(k)).push(i);});
+  for(const f of F){
+    const out=[];
+    for(let i=0;i<f.ids.length;i++){
+      const a=f.ids[i],b=f.ids[(i+1)%f.ids.length],A=VP[a],B=VP[b];out.push(a);
+      const d=[B[0]-A[0],B[1]-A[1],B[2]-A[2]],L2=d[0]*d[0]+d[1]*d[1]+d[2]*d[2];if(L2<1e-12)continue;
+      const lo=[0,1,2].map(j=>Math.floor((Math.min(A[j],B[j])-0.01)/C)),hi=[0,1,2].map(j=>Math.floor((Math.max(A[j],B[j])+0.01)/C));
+      const hits=[];
+      for(let x=lo[0];x<=hi[0];x++)for(let y=lo[1];y<=hi[1];y++)for(let z=lo[2];z<=hi[2];z++)for(const k of G.get(cell(x,y,z))||[]){
+        if(k===a||k===b)continue;
+        const P=VP[k],s=((P[0]-A[0])*d[0]+(P[1]-A[1])*d[1]+(P[2]-A[2])*d[2])/L2;
+        if(s<=1e-6||s>=1-1e-6)continue;
+        const q=[A[0]+d[0]*s-P[0],A[1]+d[1]*s-P[1],A[2]+d[2]*s-P[2]];
+        if(q[0]*q[0]+q[1]*q[1]+q[2]*q[2]<1e-6)hits.push([s,k]);
+      }
+      hits.sort((u,v)=>u[0]-v[0]);for(const h of hits)if(out[out.length-1]!==h[1])out.push(h[1]);
+    }
+    f.ids=out.filter((x,i,a)=>x!==a[(i+1)%a.length]);
+  }
+  /* triangles: fan from each face's centre, so every edge point is kept */
+  const T=[];
+  F.forEach(f=>{
+    const fi=f.g;
+    if(f.ids.length===3){T.push({v:f.ids,n:f.n,fi});return;}
+    const c=[0,1,2].map(j=>f.ids.reduce((s,i)=>s+VP[i][j],0)/f.ids.length),ci=VP.length;VP.push(c);
+    for(let i=0;i<f.ids.length;i++)T.push({v:[ci,f.ids[i],f.ids[(i+1)%f.ids.length]],n:f.n,fi});
+  });
+  const ekey=(a,b)=>a<b?a+'_'+b:b+'_'+a,E=new Map();
+  T.forEach((tr,ti)=>{for(let k=0;k<3;k++){const key=ekey(tr.v[k],tr.v[(k+1)%3]);(E.get(key)||E.set(key,[]).get(key)).push(ti);}});
+  const par=T.map((_,i)=>i),find=i=>par[i]===i?i:(par[i]=find(par[i]));
+  const ndot=(a,b)=>a[0]*b[0]+a[1]*b[1]+a[2]*b[2];
+  /* faces bending less than ~20° (the facets of a curve) stay one slab; sharper creases start a new slab */
+  for(const L of E.values())if(L.length===2&&ndot(T[L[0]].n,T[L[1]].n)>=0.94)par[find(L[0])]=find(L[1]);
+  const regions=new Map();T.forEach((_,i)=>{const r=find(i);(regions.get(r)||regions.set(r,[]).get(r)).push(i);});
+  const dist=(a,b)=>Math.hypot(a[0]-b[0],a[1]-b[1],a[2]-b[2]);
+  const unfoldRegion=R=>{
+      const inR=new Set(R),flat=new Map();
+      let area3=0,nsum=[0,0,0],upAbs=0;
+      for(const ti of R){const [a,b,c]=T[ti].v.map(i=>VP[i]),u=[b[0]-a[0],b[1]-a[1],b[2]-a[2]],w=[c[0]-a[0],c[1]-a[1],c[2]-a[2]];const cr=[u[1]*w[2]-u[2]*w[1],u[2]*w[0]-u[0]*w[2],u[0]*w[1]-u[1]*w[0]],ar=Math.hypot(...cr)/2;area3+=ar;upAbs+=Math.abs(T[ti].n[1])*ar;for(let j=0;j<3;j++)nsum[j]+=T[ti].n[j]*ar;}
+      if(area3<25)return null;
+      /* unfold: place the first triangle, then each neighbour hinged flat across the shared edge */
+      const t0=R[0],[i0,i1,i2]=T[t0].v,d01=dist(VP[i0],VP[i1]);
+      const place3=(A2,B2,da,db,side)=>{const d=Math.hypot(B2[0]-A2[0],B2[1]-A2[1])||1e-9,ex=[(B2[0]-A2[0])/d,(B2[1]-A2[1])/d],x=(da*da-db*db+d*d)/(2*d),h=Math.sqrt(Math.max(0,da*da-x*x));return [A2[0]+ex[0]*x-ex[1]*h*side,A2[1]+ex[1]*x+ex[0]*h*side];};
+      const c0=place3([0,0],[d01,0],dist(VP[i0],VP[i2]),dist(VP[i1],VP[i2]),1);
+      flat.set(t0,{[i0]:[0,0],[i1]:[d01,0],[i2]:c0});
+      const queue=[t0];
+      while(queue.length){
+        const ti=queue.shift(),P2=flat.get(ti),tv=T[ti].v;
+        for(let k=0;k<3;k++){
+          const a=tv[k],b=tv[(k+1)%3],o=tv[(k+2)%3];
+          for(const nj of E.get(ekey(a,b))){
+            if(nj===ti||!inR.has(nj)||flat.has(nj))continue;
+            if(E.get(ekey(a,b)).length!==2)continue;
+            /* a curved wall is opened along one straight line: never hinge across the ring's first/last section */
+            const ga=/^q\d+_(\d+)$/.exec(T[ti].fi),gb=/^q\d+_(\d+)$/.exec(T[nj].fi);
+            if(ga&&gb&&Math.abs(+ga[1]-+gb[1])>1)continue;
+            const c=T[nj].v.find(v=>v!==a&&v!==b),A2=P2[a],B2=P2[b],O2=P2[o];
+            const crs=(B2[0]-A2[0])*(O2[1]-A2[1])-(B2[1]-A2[1])*(O2[0]-A2[0]);
+            flat.set(nj,{[a]:A2,[b]:B2,[c]:place3(A2,B2,dist(VP[a],VP[c]),dist(VP[b],VP[c]),crs>0?-1:1)});
+            /* finish a face before moving to the next, so openings run along face edges (straight lines) */
+            if(T[nj].fi===T[ti].fi)queue.unshift(nj);else queue.push(nj);
+          }
+        }
+      }
+      /* outline: every edge whose two sides didn't end up next to each other on paper */
+      const near=(p,q)=>Math.abs(p[0]-q[0])<1e-3&&Math.abs(p[1]-q[1])<1e-3;
+      const segs=[];
+      for(const ti of R){
+        const P2=flat.get(ti);if(!P2)continue;
+        const tv=T[ti].v;
+        for(let k=0;k<3;k++){
+          const a=tv[k],b=tv[(k+1)%3],L=E.get(ekey(a,b));
+          const nb=L.length===2?L.find(x=>x!==ti):null,Q=nb!=null&&inR.has(nb)?flat.get(nb):null;
+          if(Q&&Q[a]&&Q[b]&&near(Q[a],P2[a])&&near(Q[b],P2[b]))continue;
+          segs.push([P2[a],P2[b]]);
+        }
+      }
+      const loops=chainLoops(segs);
+      if(!loops.length)return null;
+      const per=loops.reduce((s,L)=>s+L.reduce((u,p,i)=>u+Math.hypot(L[(i+1)%L.length][0]-p[0],L[(i+1)%L.length][1]-p[1]),0),0);
+      /* a long thin strip (the rim left where a hollow opens, the top of a spout's walls) is the edge of other slabs, not a slab;
+         a small but compact face (a little triangle) still is */
+      if(area3/per<4&&(loops.length>1||per>6*Math.sqrt(area3)))return null;
+      const nl=Math.hypot(...nsum)||1;
+      return {loops,n:nsum.map(v=>v/nl),flat:upAbs/area3,area:area3,per,R};
+  };
+  return dropThickness([...regions.values()].map(unfoldRegion).filter(Boolean),T,E,VP);
+}
+/* slab building ignores wall thickness. Where a part of the shape is a wall (two faces back to back, close together:
+   the arms of a handle), it is one slab: keep the bigger face, drop its twin and the narrow faces along its edges. */
+function dropThickness(regs,T,E,VP){
+  if(regs.length<3)return regs;
+  const reg=new Map();regs.forEach((r,ri)=>{for(const ti of r.R)reg.set(ti,ri);});
+  const dot=(a,b)=>a[0]*b[0]+a[1]*b[1]+a[2]*b[2];
+  const info=regs.map(r=>{
+    const vs=[...new Set(r.R.flatMap(ti=>T[ti].v))].map(i=>VP[i]);
+    const c=[0,1,2].map(j=>vs.reduce((s,v)=>s+v[j],0)/vs.length),n=r.n;
+    const planar=r.R.every(ti=>dot(T[ti].n,n)>0.999);
+    const a0=Math.abs(n[0])<0.9?[1,0,0]:[0,1,0],u=[n[1]*a0[2]-n[2]*a0[1],n[2]*a0[0]-n[0]*a0[2],n[0]*a0[1]-n[1]*a0[0]],ul=Math.hypot(...u);u.forEach((x,k)=>u[k]=x/ul);
+    const v=[n[1]*u[2]-n[2]*u[1],n[2]*u[0]-n[0]*u[2],n[0]*u[1]-n[1]*u[0]];
+    return {vs,c,n,planar,u,v,width:2*r.area/r.per};
+  });
+  const span=(I,J,ax)=>{const p=I.vs.map(x=>dot(x,ax)),q=J.vs.map(x=>dot(x,ax));return [Math.min(...p),Math.max(...p),Math.min(...q),Math.max(...q)];};
+  const adj=regs.map(()=>new Set());
+  for(const L of E.values()){if(L.length!==2)continue;const i=reg.get(L[0]),j=reg.get(L[1]);if(i!==undefined&&j!==undefined&&i!==j){adj[i].add(j);adj[j].add(i);}}
+  const pairs=[];
+  for(let i=0;i<regs.length;i++)for(let j=0;j<regs.length;j++){
+    if(i===j)continue;const I=info[i],J=info[j];
+    if(!I.planar||!J.planar||regs[i].area<regs[j].area||(regs[i].area===regs[j].area&&i>j))continue;
+    if(dot(I.n,J.n)>-0.94)continue;
+    const d=-dot([J.c[0]-I.c[0],J.c[1]-I.c[1],J.c[2]-I.c[2]],I.n);  /* J sits behind I: the two sides of one wall */
+    if(d<0.5||d>20)continue;
+    const [a0,a1,b0,b1]=span(I,J,I.u),[c0,c1,e0,e1]=span(I,J,I.v);
+    if(d>0.5*Math.max(a1-a0,c1-c0))continue;
+    const ov=Math.max(0,Math.min(a1,b1)-Math.max(a0,b0))*Math.max(0,Math.min(c1,e1)-Math.max(c0,e0));
+    if(ov<0.3*(b1-b0)*(e1-e0))continue;
+    pairs.push({i,j,d});
+  }
+  pairs.sort((p,q)=>p.d-q.d);
+  const drop=new Set(),keep=new Set();
+  for(const {i,j,d} of pairs){
+    if(drop.has(i)||drop.has(j)||keep.has(j))continue;
+    drop.add(j);keep.add(i);
+    /* an edge face runs between the two twins, touching both */
+    for(const k of adj[i]){
+      if(k===j||keep.has(k)||!adj[j].has(k))continue;
+      if(info[k].width<=1.5*d+1&&Math.abs(dot(info[k].n,info[i].n))<=0.5)drop.add(k);
+    }
+  }
+  return regs.filter((_,k)=>!drop.has(k));
+}
+function chainLoops(segs){
+  const k=p=>Math.round(p[0]*200)+','+Math.round(p[1]*200),M=new Map();
+  segs.forEach((s,i)=>{for(const e of [0,1]){const key=k(s[e]);(M.get(key)||M.set(key,[]).get(key)).push(i);}});
+  const used=new Set(),loops=[];
+  for(let i=0;i<segs.length;i++){
+    if(used.has(i))continue;
+    used.add(i);const L=[segs[i][0]];let cur=segs[i][1];const start=k(segs[i][0]);
+    for(let guard=0;guard<segs.length+2;guard++){
+      if(k(cur)===start)break;
+      L.push(cur);
+      const nx=(M.get(k(cur))||[]).find(j=>!used.has(j));
+      if(nx===undefined)break;
+      used.add(nx);cur=k(segs[nx][0])===k(cur)?segs[nx][1]:segs[nx][0];
+    }
+    if(L.length>=3)loops.push(simplifyLoop(L));
+  }
+  return loops.filter(L=>L.length>=3&&Math.abs(polyArea(L))>0.5).sort((a,b)=>Math.abs(polyArea(b))-Math.abs(polyArea(a)));
+}
+/* drop points that sit within 0.2 mm of the line through their neighbours, without letting errors add up (curves stay curves) */
+function simplifyLoop(L){
+  if(L.length<5)return L;
+  let far=0,fd=-1;for(let i=1;i<L.length;i++){const d=Math.hypot(L[i][0]-L[0][0],L[i][1]-L[0][1]);if(d>fd){fd=d;far=i;}}
+  const a=rdp(L.slice(0,far+1),0.2),b=rdp(L.slice(far).concat([L[0]]),0.2);
+  const out=a.slice(0,-1).concat(b.slice(0,-1));
+  return out.length>=3?out:L;
+}
+/* the hollow of a piece (most of its size in two directions) rather than a window through one wall */
+function isCavity(p,c){
+  let n=0;
+  for(const a of ['x','y','z']){const ov=Math.min(p.r[a][1],c.r[a][1])-Math.max(p.r[a][0],c.r[a][0]),sp=p.r[a][1]-p.r[a][0];if(sp>0&&ov>=0.6*sp)n++;}
+  return n>=2;
+}
+/* slab building ignores wall thickness: a face the hollow opens (takes a fifth or more of it) is left open, every other face is kept whole */
+function polyArea3(f){let s=[0,0,0];const v=f.v;for(let i=1;i+1<v.length;i++){const a=v[0],b=v[i],c=v[i+1],u=[b[0]-a[0],b[1]-a[1],b[2]-a[2]],w=[c[0]-a[0],c[1]-a[1],c[2]-a[2]];s[0]+=u[1]*w[2]-u[2]*w[1];s[1]+=u[2]*w[0]-u[0]*w[2];s[2]+=u[0]*w[1]-u[1]*w[0];}return Math.hypot(...s)/2;}
+function openFaces(surf,holes){
+  const G=new Map();
+  for(const f of surf){const n=f.p.n,k=n.map(v=>Math.round(v*500)).join(',')+'|'+Math.round(f.p.w*5);(G.get(k)||G.set(k,[]).get(k)).push(f);}
+  const out=[];
+  for(const fs of G.values()){
+    const before=fs.reduce((s,f)=>s+polyArea3(f),0);
+    let rest=fs;for(const h of holes)rest=CSG.outside(rest,h);
+    const after=rest.reduce((s,f)=>s+polyArea3(f),0);
+    if(after>=0.8*before)out.push(...fs);
+  }
+  return out;
+}
+const partName=r=>r.flat>0.8?(r.n[1]>0?'top':'base'):'side';
+/* all templates for the current model */
+function buildTemplates(){
+  const res=[];
+  for(const p of st.pieces){
+    if(p.cutOf)continue;
+    const dims=['x','y','z'].map(a=>[a,p.r[a][1]-p.r[a][0]]).sort((u,v)=>u[1]-v[1]);
+    /* thin pieces (a handle, a fin): one slab cut to the outline seen from the side they're flat on */
+    if(dims[0][1]<=15||dims[0][1]<=0.25*dims[1][1]){res.push(...flatSlab(p,dims[0][0]));continue;}
+    let surf=solidOf(p,false);
+    const cuts=cuttersOf(p),cav=cuts.filter(c=>isCavity(p,c));
+    if(cav.length)surf=openFaces(surf,cav.map(c=>solidOf(c,true)));
+    for(const c of cuts)if(!cav.includes(c))surf=CSG.outside(surf,solidOf(c,true));
+    const parts=unfoldSurface(surf,0);
+    if(!parts.length){res.push(...flatSlab(p,dims[0][0]));continue;}
+    const count={};
+    for(const r of parts){const nm=partName(r);count[nm]=(count[nm]||0)+1;}
+    const seen={};
+    for(const r of parts.sort((a,b)=>b.area-a.area)){
+      const nm=partName(r);seen[nm]=(seen[nm]||0)+1;
+      res.push({piece:p.name,part:count[nm]>1?`${nm} ${seen[nm]}`:nm,loops:r.loops});
+    }
+  }
+  return res.map(orientTemplate);
+}
+/* turn each template to its snuggest box, then put its corner at 0,0 */
+function orientTemplate(tp){
+  const pts=tp.loops[0];let best=null;
+  /* try lining up each edge with the page, plus a sweep of angles for curved outlines */
+  const angles=[];for(let deg=0;deg<180;deg+=2)angles.push(deg*Math.PI/180);
+  for(let i=0;i<pts.length;i++){const p=pts[i],q=pts[(i+1)%pts.length];if(Math.hypot(q[0]-p[0],q[1]-p[1])>5)angles.push(-Math.atan2(q[1]-p[1],q[0]-p[0]));}
+  for(const a of angles){
+    const c=Math.cos(a),s=Math.sin(a);
+    let x0=Infinity,y0=Infinity,x1=-Infinity,y1=-Infinity;
+    for(const p of pts){const x=p[0]*c-p[1]*s,y=p[0]*s+p[1]*c;x0=Math.min(x0,x);x1=Math.max(x1,x);y0=Math.min(y0,y);y1=Math.max(y1,y);}
+    const ar=(x1-x0)*(y1-y0);if(!best||ar<best.ar-1e-6)best={ar,c,s,x0,y0,w:x1-x0,h:y1-y0};
+  }
+  const T=L=>L.map(p=>[p[0]*best.c-p[1]*best.s-best.x0,p[0]*best.s+p[1]*best.c-best.y0]);
+  return Object.assign({},tp,{loops:tp.loops.map(T),folds:(tp.folds||[]).map(T),w:best.w,h:best.h});
+}
+
+/* ---------- print preview & PDF ---------- */
+const PAPER={a4:{w:210,h:297,name:'A4'},letter:{w:215.9,h:279.4,name:'US Letter'}};
+/* the printing area runs to the edge of the paper: no margin, no header */
+const PM=0,PHEAD=0,PGAP=8;
+/* pack templates onto pages at 1:1; anything bigger than a page is split into tiles you tape together.
+   Pieces you placed yourself keep their page, spot and turn (st.printLayout); new ones are packed after them. */
+const tkey=tp=>tp.piece+'|'+tp.part;
+function layoutPages(tps,paper){
+  const P=PAPER[paper],aw=P.w-2*PM,ah=P.h-2*PM-PHEAD,pages=[],L=st.printLayout||{};
+  const fits=(w,h)=>w<=aw&&h<=ah;
+  const placed=[],small=[],big=[],onTile=[];
+  for(const tp0 of tps){
+    const o=L[tkey(tp0)];
+    if(o){
+      const t=xform(tp0,o.ang!=null?o.ang:(o.rot||0)*90,o.fx,o.fy);
+      if(!fits(t.w,t.h)&&!fits(t.h,t.w)){big.push({tp:t,o});continue;}
+      if(fits(t.w,t.h)&&!o.big){(o.on?onTile:placed).push({tp:t,o});continue;}
+    }
+    if(fits(tp0.w,tp0.h))small.push(tp0);
+    else if(fits(tp0.h,tp0.w))small.push(rotate90(tp0));
+    else big.push({tp:tp0.w>tp0.h&&tp0.w>aw&&tp0.h<=aw?rotate90(tp0):tp0,o:null});
+  }
+  const need=placed.reduce((m,p)=>Math.max(m,(p.o.pg||0)+1),Math.max(0,(st.printPages||0)));
+  for(let i=0;i<need;i++)pages.push({items:[]});
+  /* a remembered spot that's off the paper (pieces lost by an earlier drag) is pulled back onto it */
+  for(const {tp,o} of placed)pages[o.pg||0].items.push({tp,x:clamp(o.x,0,Math.max(0,P.w-tp.w)),y:clamp(o.y,0,Math.max(0,P.h-tp.h))});
+  small.sort((a,b)=>b.h-a.h);
+  let page=null,x=0,y=0,row=0;
+  const newPage=()=>{page={items:[]};pages.push(page);x=0;y=0;row=0;};
+  for(const tp of small){
+    if(!page)newPage();
+    if(x+tp.w>aw){x=0;y+=row+PGAP;row=0;}
+    if(y+tp.h>ah){newPage();}
+    page.items.push({tp,x:PM+x,y:PM+PHEAD+y});
+    x+=tp.w+PGAP;row=Math.max(row,tp.h);
+  }
+  /* a piece bigger than the paper spreads over a block of pages you tape together; it can sit anywhere in that block (ox, oy),
+     and other pieces can share its pages */
+  for(const {tp,o} of big){
+    const ox=o?Math.max(0,o.ox||0):0,oy=o?Math.max(0,o.oy||0):0;
+    const cols=Math.ceil((ox+tp.w)/aw-1e-6),rows=Math.ceil((oy+tp.h)/ah-1e-6),key=tkey(tp);
+    for(let r=0;r<rows;r++)for(let c=0;c<cols;c++)
+      pages.push({tile:{r,c,rows,cols,key,name:tp.piece+' · '+tp.part},items:[{tp,x:ox-c*aw,y:oy-r*ah,clip:[0,0,aw,ah],big:{r,c}}]});
+  }
+  for(const {tp,o} of onTile){
+    const pg=pages.find(p=>p.tile&&p.tile.key===o.on&&p.tile.r===o.r&&p.tile.c===o.c);
+    if(pg)pg.items.push({tp,x:clamp(o.x,0,Math.max(0,P.w-tp.w)),y:clamp(o.y,0,Math.max(0,P.h-tp.h))});
+    else{let p=pages.find(q=>!q.tile);if(!p){p={items:[]};pages.unshift(p);}p.items.push({tp,x:0,y:0});}
+  }
+  if(!pages.length)pages.push({items:[]});
+  if(!tps.length)pages[0].empty=true;
+  return pages;
+}
+/* a piece on the pages is its slab outline (base), mirrored (fx, fy), then turned by ang degrees clockwise.
+   The result is baked into the points and moved so its box starts at 0,0: everything else reads w, h and the points. */
+const normAng=a=>{a=Math.round(a*10)/10%360;return a<0?a+360:a;};
+function xform(tp,ang,fx,fy){
+  const B=tp.base||tp,a=normAng(ang||0)*Math.PI/180,c=Math.cos(a),s=Math.sin(a);
+  const R=L=>L.map(p=>{const x=fx?B.w-p[0]:p[0],y=fy?B.h-p[1]:p[1];return [x*c-y*s,x*s+y*c];});
+  const loops=B.loops.map(R),folds=(B.folds||[]).map(R);
+  const [x0,y0,x1,y1]=bboxOf(loops.flat());
+  const T=L=>L.map(p=>[p[0]-x0,p[1]-y0]);
+  return Object.assign({},B,{base:B,loops:loops.map(T),folds:folds.map(T),w:x1-x0,h:y1-y0,ang:normAng(ang||0),fx:!!fx,fy:!!fy});
+}
+const rotate90=tp=>xform(tp,(tp.ang||0)+90,tp.fx,tp.fy);
+/* keep only the part of a segment inside a rectangle (for tiles) */
+function clipSeg(x1,y1,x2,y2,r){
+  let t0=0,t1=1;const dx=x2-x1,dy=y2-y1;
+  for(const [p,q] of [[-dx,x1-r[0]],[dx,r[0]+r[2]-x1],[-dy,y1-r[1]],[dy,r[1]+r[3]-y1]]){
+    if(Math.abs(p)<1e-12){if(q<0)return null;continue;}
+    const t=q/p;if(p<0){if(t>t1)return null;if(t>t0)t0=t;}else{if(t<t0)return null;if(t<t1)t1=t;}
+  }
+  return [x1+dx*t0,y1+dy*t0,x1+dx*t1,y1+dy*t1];
+}
+function itemLabel(it){const L=it.tp.loops[0],c=labelPoint(L,it.tp.loops.slice(1));return {x:it.x+c[0],y:it.y+c[1],a:it.tp.piece,b:it.tp.part};}
+const offPage=(it,P)=>!it.clip&&(it.x<PM-0.05||it.y<PM+PHEAD-0.05||it.x+it.tp.w>P.w-PM+0.05||it.y+it.tp.h>P.h-PM+0.05);
+/* fold lines: dashed, where the slab bends */
+const foldD=(tp,x,y)=>(tp.folds||[]).map(L=>'M'+L.map(p=>f1(x+p[0])+' '+f1(y+p[1])).join('L')).join('');
+function pieceSVG(it,on,off){
+  const tp=it.tp,d=tp.loops.map(L=>'M'+L.map(p=>f1(p[0])+' '+f1(p[1])).join('L')+'Z').join(''),c=labelPoint(tp.loops[0],tp.loops.slice(1)),fd=foldD(tp,0,0);
+  let s=`<rect width="${f1(tp.w)}" height="${f1(tp.h)}" class="phit"/><path d="${d}" class="pcut" fill-rule="evenodd"/>${fd?`<path d="${fd}" class="pfold"/>`:''}<text x="${f1(c[0])}" y="${f1(c[1])}" class="plab">${esc(tp.piece)}</text><text x="${f1(c[0])}" y="${f1(c[1]+4.2)}" class="psub">${esc(tp.part)}</text>`;
+  if(on){
+    /* its size, drafting style, above and to the left */
+    const w=tp.w,h=tp.h;
+    s+=`<rect x="0" y="0" width="${f1(w)}" height="${f1(h)}" class="psel"/>`;
+    s+=`<path d="M0 -2V-8M${f1(w)} -2V-8M0 -5H${f1(w)}M-2 0H-8M-2 ${f1(h)}H-8M-5 0V${f1(h)}" class="pdim"/>`;
+    s+=`<text x="${f1(w/2)}" y="-6.5" class="pdimt">${fmtU(w)} ${UN()}</text><text transform="translate(-6.5 ${f1(h/2)}) rotate(-90)" class="pdimt">${fmtU(h)} ${UN()}</text>`;
+    /* the turn handle: drag it around the piece */
+    if(!it.clip){
+      s+=`<path d="M${f1(w/2)} -10V-14" class="prstem"/><circle cx="${f1(w/2)}" cy="-16" r="1.5" class="prot"/>`;
+      if(it.tp.ang||PR.turning)s+=`<text x="${f1(w/2+4)}" y="-15" class="prang">${fmt(it.tp.ang||0)}°</text>`;
+    }
+  }
+  return s;
+}
+function pageSVG(pg,i,n,paper){
+  const P=PAPER[paper];let s=`<svg viewBox="0 0 ${P.w} ${P.h}" xmlns="http://www.w3.org/2000/svg"><rect width="${P.w}" height="${P.h}" fill="#fff"/>`;
+  pg.items.forEach((it,k)=>{
+    const on=PR.sel&&PR.sel.p===i&&PR.sel.k===k;
+    if(it.clip){
+      const cid=`pc${i}_${k}`;
+      s+=`<clipPath id="${cid}"><rect x="${it.clip[0]}" y="${it.clip[1]}" width="${it.clip[2]}" height="${it.clip[3]}"/></clipPath><g clip-path="url(#${cid})"><g class="pitem big${on?' on':''}" data-p="${i}" data-k="${k}" data-key="${esc(tkey(it.tp))}" transform="translate(${f1(it.x)} ${f1(it.y)})">${pieceSVG(it,false,false)}${on?`<rect width="${f1(it.tp.w)}" height="${f1(it.tp.h)}" class="psel"/>`:''}</g></g>`;
+      return;
+    }
+    const off=offPage(it,P);
+    s+=`<g class="pitem${on?' on':''}${off?' off':''}" data-p="${i}" data-k="${k}" transform="translate(${f1(it.x)} ${f1(it.y)})">${pieceSVG(it,on,off)}</g>`;
+  });
+  if(pg.empty)s+=`<text x="${P.w/2}" y="${P.h/2}" class="pcl">Nothing to print yet</text>`;
+  s+=`<g class="pguides"></g>`;
+  return s+'</svg>';
+}
+/* the same pages, drawn into a PDF in millimetres */
+function buildPDF(pages,paper){
+  pages=pages.filter(pg=>pg.items.length);
+  const {jsPDF}=window.jspdf,P=PAPER[paper];
+  const doc=new jsPDF({unit:'mm',format:paper==='a4'?'a4':'letter',orientation:'portrait'});
+  pages.forEach((pg,i)=>{
+    if(i)doc.addPage();
+    doc.setFont('helvetica','normal');
+    doc.setDrawColor(0);doc.setTextColor(30);
+    for(const it of pg.items){
+      doc.setLineWidth(prSettings().line*PT);  /* line weight from the Print settings, 0.5 pt by default */
+      for(const L of it.tp.loops)for(let k=0;k<L.length;k++){
+        const a=L[k],b=L[(k+1)%L.length];
+        let s=[it.x+a[0],it.y+a[1],it.x+b[0],it.y+b[1]];
+        if(it.clip){s=clipSeg(s[0],s[1],s[2],s[3],it.clip);if(!s)continue;}
+        doc.line(s[0],s[1],s[2],s[3]);
+      }
+      doc.setLineWidth(prSettings().line*PT);doc.setLineDashPattern([2,1.5],0);
+      for(const L of it.tp.folds||[])for(let k=0;k+1<L.length;k++){
+        const a=L[k],b=L[k+1];let s=[it.x+a[0],it.y+a[1],it.x+b[0],it.y+b[1]];
+        if(it.clip){s=clipSeg(s[0],s[1],s[2],s[3],it.clip);if(!s)continue;}
+        doc.line(s[0],s[1],s[2],s[3]);
+      }
+      doc.setLineDashPattern([],0);
+      const l=itemLabel(it);
+      if(!it.clip||(l.x>=it.clip[0]&&l.x<=it.clip[0]+it.clip[2]&&l.y>=it.clip[1]&&l.y<=it.clip[1]+it.clip[3])){
+        doc.setFontSize(10);doc.text(l.a,l.x,l.y,{align:'center'});doc.setFontSize(7);doc.text(l.b,l.x,l.y+4.2,{align:'center'});
+      }
+    }
+  });
+  return doc.output('blob');
+}
+
+const PR={pages:[],tps:[],timer:null};
+function prSettings(){return {paper:st.paper||'a4',grow:st.grow==null?15:st.grow,line:st.lineWt||0.5};}
+const PT=25.4/72;  /* one point in mm */
+/* everything is enlarged by this much, so the clay shrinking while it dries and fires brings it back to the drawn size */
+const growTemplates=(tps,g)=>{const k=1+g/100;return tps.map(tp=>Object.assign({},tp,{loops:tp.loops.map(L=>L.map(p=>[p[0]*k,p[1]*k])),folds:(tp.folds||[]).map(L=>L.map(p=>[p[0]*k,p[1]*k])),w:tp.w*k,h:tp.h*k}));};
+/* Drawing and Patterns are two tabs: the header stays, the tools on its right swap */
+function setTab(pat){
+  $('#printer').hidden=!pat;$('#drawCtl').hidden=pat;$('#patCtl').hidden=!pat;document.body.classList.toggle('pat',pat);
+  for(const [id,on] of [['#tabDraw',!pat],['#printBtn',pat]]){$(id).setAttribute('aria-pressed',String(on));$(id).setAttribute('aria-selected',String(on));}
+  if(!pat)requestAnimationFrame(render);
+}
+function openPrinter(){
+  closePop();setTab(true);
+  $('#prPaper').value=prSettings().paper;
+  if(document.activeElement!==$('#prGrow'))$('#prGrow').value=prSettings().grow;
+  refreshPrinter();
+}
+function closePrinter(){setTab(false);}
+function refreshPrinter(){
+  const {paper,grow}=prSettings();
+  $('#prPages').innerHTML='<p class="pr-wait">Working out the slabs…</p>';
+  clearTimeout(PR.timer);
+  PR.timer=setTimeout(()=>{
+    try{PR.tps=growTemplates(buildTemplates(),grow);}catch(err){PR.tps=[];$('#prPages').innerHTML=`<p class="pr-wait">Couldn't work out the slabs: ${esc(err.message)}</p>`;return;}
+    PR.pages=layoutPages(PR.tps,paper);PR.sel=null;
+    renderBoard(true);
+  },30);
+}
+function renderBoard(fit){
+  const {paper}=prSettings(),n=PR.pages.length;
+  $('#prPages').innerHTML='<div class="pr-board" id="prBoard">'+PR.pages.map((pg,i)=>`<figure class="pr-page" data-i="${i}">${pageSVG(pg,i,n,paper)}<figcaption>Page ${i+1}${pg.tile?` · ${esc(pg.tile.name)}, part ${pg.tile.r*pg.tile.cols+pg.tile.c+1} of ${pg.tile.rows*pg.tile.cols}`:''}</figcaption></figure>`).join('')+'</div>';
+  const it=PR.sel&&PR.pages[PR.sel.p]&&PR.pages[PR.sel.p].items[PR.sel.k];
+  $('#prRotate').disabled=!it;$('#prFlipH').disabled=!it;$('#prFlipV').disabled=!it;
+  const ai=$('#prAng');ai.disabled=!it;if(document.activeElement!==ai)ai.value=it?fmt(it.tp.ang||0):'';
+  boardLayout();
+  if(fit)boardFit();else boardApply();
+}
+/* remember where every piece sits, so reopening (or editing the drawing) keeps your arrangement */
+function commitLayout(){
+  const L={};
+  const {paper}=prSettings(),P=PAPER[paper];let ni=0;
+  PR.pages.forEach(pg=>{
+    for(const it of pg.items){
+      const tr={ang:it.tp.ang||0};if(it.tp.fx)tr.fx=true;if(it.tp.fy)tr.fy=true;
+      if(it.big)L[tkey(it.tp)]=Object.assign({big:true,ox:r1(it.x+it.big.c*P.w),oy:r1(it.y+it.big.r*P.h)},tr);
+      else if(pg.tile)L[tkey(it.tp)]=Object.assign({on:pg.tile.key,r:pg.tile.r,c:pg.tile.c,x:r1(it.x),y:r1(it.y)},tr);
+      else L[tkey(it.tp)]=Object.assign({pg:ni,x:r1(it.x),y:r1(it.y)},tr);
+    }
+    if(!pg.tile)ni++;
+  });
+  const n=PR.pages.filter(pg=>!pg.tile).length;
+  if(JSON.stringify(L)!==JSON.stringify(st.printLayout||{})||n!==(st.printPages||0))pushHist(snap());
+  st.printLayout=L;st.printPages=n;save();
+}
+function tidyPages(){
+  /* drop empty pages you didn't ask for, and renumber */
+  const sel=PR.sel&&PR.pages[PR.sel.p]&&PR.pages[PR.sel.p].items[PR.sel.k];
+  PR.pages=PR.pages.filter((pg,i)=>pg.items.length||pg.keep||(i===0&&!PR.pages.some(p=>p.items.length)));
+  if(sel)PR.pages.forEach((pg,i)=>{const k=pg.items.indexOf(sel);if(k>=0)PR.sel={p:i,k};});
+}
+/* Download pattern (File menu): the slabs as a PDF at 1:1, laid out as on the Patterns pages */
+async function savePDF(){
+  toggleMenu(false);
+  if(!window.jspdf){toast("The PDF maker couldn't load here.");return;}
+  const {paper,grow}=prSettings();
+  if(!st.pieces.length){toast('Nothing to print yet: draw a shape first.');return;}
+  const btn=$('#prSave');btn.disabled=true;toast('Making the PDF…');
+  try{
+    /* from the Drawing tab the pages aren't laid out yet: work them out the same way */
+    if($('#printer').hidden||!PR.pages||!PR.pages.length){PR.tps=growTemplates(buildTemplates(),grow);PR.pages=layoutPages(PR.tps,paper);}
+    const blob=buildPDF(PR.pages,paper);
+    const dl=await getDownloads();
+    if(!dl){toast("Saving files isn't available in this view.");return;}
+    await dl.save({filename:fileSafe(st.docName)+' pattern.pdf',data:blob});
+    toast('Pattern saved.');
+  }catch(err){
+    const c=err&&err.code;
+    toast(c==='declined'?'Download cancelled.':c==='rate_limited'?'A save is already waiting for you. Try again in a moment.':"Couldn't save the PDF here.");
+  }finally{btn.disabled=false;}
+}
+$('#printBtn').addEventListener('click',()=>{if($('#printer').hidden)openPrinter();});
+$('#tabDraw').addEventListener('click',()=>{if(!$('#printer').hidden)closePrinter();});
+$('#prSave').addEventListener('click',savePDF);
+$('#prLine').addEventListener('change',e=>{const v=parseFloat(e.target.value);if(isFinite(v))st.lineWt=Math.round(clamp(v,0.25,2)*4)/4;e.target.value=prSettings().line;save();});
+$('#prPaper').addEventListener('change',e=>{st.paper=e.target.value;save();if(!$('#printer').hidden)refreshPrinter();});
+$('#prGrow').addEventListener('change',e=>{const v=parseFloat(e.target.value);if(isFinite(v)&&v>=0&&v<=50){st.grow=r1(v);save();}e.target.value=prSettings().grow;if(!$('#printer').hidden)refreshPrinter();});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('#printer').hidden){e.stopImmediatePropagation();if(PR.sel){PR.sel=null;renderBoard(false);}else closePrinter();}},true);
+
+/* the preview is a board like the drawing views: scroll to zoom around the pointer, drag to pan */
+const PXMM=96/25.4,PV={k:0.4,x:24,y:24};
+function boardApply(){
+  const b=$('#prBoard');b.style.transform=`translate(${PV.x}px,${PV.y}px) scale(${PV.k})`;
+  /* one screen pixel, in page millimetres */
+  const s=b.querySelector('.pr-page svg'),P=PAPER[prSettings().paper];
+  const w=s?s.getBoundingClientRect().width:0;if(w)b.style.setProperty('--sw',String(P.w/w));
+}
+function boardFit(){
+  const vp=$('#prPages').getBoundingClientRect(),b=$('#prBoard');
+  const bw=b.offsetWidth,bh=b.offsetHeight;if(!bw||!bh)return;
+  /* the floating header covers the top of the board: fit the pages below it */
+  const top=Math.max(24,document.querySelector('header').getBoundingClientRect().bottom-vp.top+16),avail=vp.height-top-24;
+  PV.k=clamp(Math.min((vp.width-48)/bw,avail/bh),0.05,4);
+  PV.x=(vp.width-bw*PV.k)/2;PV.y=top+Math.max(0,(avail-bh*PV.k)/2);
+  boardApply();
+}
+function boardZoom(f,cx,cy){
+  const vp=$('#prPages').getBoundingClientRect();
+  if(cx==null){cx=vp.width/2;cy=vp.height/2;}
+  const k=clamp(PV.k*f,0.05,6),r=k/PV.k;
+  PV.x=cx-(cx-PV.x)*r;PV.y=cy-(cy-PV.y)*r;PV.k=k;boardApply();
+}
+function boardLayout(){
+  const P=PAPER[prSettings().paper],b=$('#prBoard'),n=b.children.length,cols=Math.min(n,n<=4?n:Math.ceil(Math.sqrt(n*1.6)));
+  b.style.gridTemplateColumns=`repeat(${Math.max(1,cols)},${P.w*PXMM}px)`;
+}
+$('#prPages').addEventListener('wheel',e=>{
+  e.preventDefault();
+  const r=$('#prPages').getBoundingClientRect(),dy=e.deltaMode===1?e.deltaY*16:e.deltaY;
+  boardZoom(Math.exp(-dy*0.0015),e.clientX-r.left,e.clientY-r.top);
+},{passive:false});
+let prDrag=null;
+/* the page under the pointer, by position (the piece being dragged hangs over other pages, so hit-testing elements would find its own page) */
+const pageAt=(cx,cy)=>[...document.querySelectorAll('.pr-page')].find(f=>{const r=f.querySelector('svg').getBoundingClientRect();return cx>=r.left&&cx<=r.right&&cy>=r.top&&cy<=r.bottom;})||null;
+const svgOf=i=>$(`.pr-page[data-i="${i}"] svg`);
+const toMM=(svg,cx,cy)=>{const r=svg.getBoundingClientRect(),P=PAPER[prSettings().paper];return [(cx-r.left)*P.w/r.width,(cy-r.top)*P.h/r.height,P.w/r.width];};
+/* snap a piece's edges to the page margins and to the other pieces on that page; returns position and guide lines */
+function snapPiece(pi,skip,x,y,w,h,tol){
+  const P=PAPER[prSettings().paper],X=[PM,P.w-PM],Y=[PM+PHEAD,P.h-PM];
+  PR.pages[pi].items.forEach(o=>{if(o===skip||o.clip)return;X.push(o.x,o.x+o.tp.w,o.x+o.tp.w+PGAP,o.x-PGAP);Y.push(o.y,o.y+o.tp.h,o.y+o.tp.h+PGAP,o.y-PGAP);});
+  const best=(v,size,list)=>{let b=null;for(const c of list)for(const [off,edge] of [[0,c],[size,c]]){const d=Math.abs(v+off-edge);if(d<tol&&(!b||d<b.d))b={d,v:edge-off,g:edge};}return b;};
+  const bx=best(x,w,X),by=best(y,h,Y),g=[];
+  if(bx){x=bx.v;g.push(['x',bx.g]);}if(by){y=by.v;g.push(['y',by.g]);}
+  return {x,y,g};
+}
+function showGuides(svg,g){
+  const P=PAPER[prSettings().paper],el=svg.querySelector('.pguides');if(!el)return;
+  el.innerHTML=g.map(([a,v])=>a==='x'?`<path d="M${f1(v)} 0V${P.h}" class="pguide"/>`:`<path d="M0 ${f1(v)}H${P.w}" class="pguide"/>`).join('');
+}
+$('#prPages').addEventListener('pointerdown',e=>{
+  if(e.button!==0&&e.button!==1)return;
+  const g=e.button===0&&e.target.closest&&e.target.closest('.pitem');
+  try{$('#prPages').setPointerCapture(e.pointerId);}catch(_){}
+  if(g&&e.target.classList.contains('prot')){
+    const pi=+g.dataset.p,k=+g.dataset.k,it=PR.pages[pi].items[k],svg=svgOf(pi),[mx,my]=toMM(svg,e.clientX,e.clientY);
+    const cx=it.x+it.tp.w/2,cy=it.y+it.tp.h/2;
+    prDrag={turn:true,piece:true,pi,k,it,g,svg,cx,cy,a0:it.tp.ang||0,p0:Math.atan2(my-cy,mx-cx),moved:false,x0:e.clientX,y0:e.clientY};
+    PR.turning=true;$('#prPages').classList.add('pr-rotating');
+    return;
+  }
+  if(g&&g.classList.contains('big')){
+    const pi=+g.dataset.p,k=+g.dataset.k,it=PR.pages[pi].items[k],svg=svgOf(pi),P=PAPER[prSettings().paper],t=PR.pages[pi].tile;
+    prDrag={big:true,piece:true,pi,k,it,key:t.key,ox:it.x+t.c*P.w,oy:it.y+t.r*P.h,mm:toMM(svg,0,0)[2],x0:e.clientX,y0:e.clientY,moved:false,cols:t.cols,rows:t.rows};
+    return;
+  }
+  if(g){
+    const pi=+g.dataset.p,k=+g.dataset.k,it=PR.pages[pi].items[k],svg=svgOf(pi),[mx,my]=toMM(svg,e.clientX,e.clientY);
+    prDrag={piece:true,pi,k,it,g,svg,dx:mx-it.x,dy:my-it.y,x0:e.clientX,y0:e.clientY,moved:false};
+    svg.closest('.pr-page').classList.add('lift');
+    return;
+  }
+  prDrag={x:e.clientX,y:e.clientY,px:PV.x,py:PV.y,x0:e.clientX,y0:e.clientY};$('#prPages').classList.add('panning');
+});
+$('#prPages').addEventListener('pointermove',e=>{
+  if(!prDrag)return;
+  if(!prDrag.piece){PV.x=prDrag.px+(e.clientX-prDrag.x);PV.y=prDrag.py+(e.clientY-prDrag.y);boardApply();return;}
+  const d=prDrag;if(Math.hypot(e.clientX-d.x0,e.clientY-d.y0)>3)d.moved=true;if(!d.moved)return;
+  if(d.turn){
+    const [mx,my]=toMM(d.svg,e.clientX,e.clientY);
+    let a=d.a0+(Math.atan2(my-d.cy,mx-d.cx)-d.p0)*180/Math.PI;
+    a=Math.round(a);
+    /* magnetic: within 6° of a multiple of 45° it clicks onto it; Alt turns freely */
+    const n=Math.round(a/45)*45;if(!e.altKey&&Math.abs(a-n)<=6)a=n;
+    const tp=xform(d.it.tp,a,d.it.tp.fx,d.it.tp.fy);
+    d.it.tp=tp;d.it.x=r1(d.cx-tp.w/2);d.it.y=r1(d.cy-tp.h/2);
+    d.g.setAttribute('transform',`translate(${f1(d.it.x)} ${f1(d.it.y)})`);
+    d.g.innerHTML=pieceSVG(d.it,true,false);
+    const ai=$('#prAng');if(ai)ai.value=fmt(tp.ang);
+    return;
+  }
+  if(d.big){
+    /* slide it around inside its block of pages (it doesn't add pages while you drag) */
+    const P=PAPER[prSettings().paper],tp=d.it.tp;
+    d.nx=clamp(d.ox+(e.clientX-d.x0)*d.mm,0,Math.max(0,d.cols*P.w-tp.w));d.ny=clamp(d.oy+(e.clientY-d.y0)*d.mm,0,Math.max(0,d.rows*P.h-tp.h));
+    PR.pages.forEach((pg,i)=>{if(!pg.tile||pg.tile.key!==d.key)return;const el=document.querySelector(`.pr-page[data-i="${i}"] .pitem.big`);if(el)el.setAttribute('transform',`translate(${f1(d.nx-pg.tile.c*P.w)} ${f1(d.ny-pg.tile.r*P.h)})`);});
+    return;
+  }
+  const fig=pageAt(e.clientX,e.clientY),over=!!fig,ti=over?+fig.dataset.i:d.pi,tsvg=svgOf(ti);
+  const [mx,my,mmpx]=toMM(tsvg,e.clientX,e.clientY);
+  const sn=e.altKey?{x:mx-d.dx,y:my-d.dy,g:[]}:snapPiece(ti,d.it,mx-d.dx,my-d.dy,d.it.tp.w,d.it.tp.h,8*mmpx);
+  /* over a page it stays on the paper; dropped anywhere else it goes back where it was */
+  const P0=PAPER[prSettings().paper];
+  if(over){sn.x=clamp(sn.x,0,Math.max(0,P0.w-d.it.tp.w));sn.y=clamp(sn.y,0,Math.max(0,P0.h-d.it.tp.h));}
+  d.ti=over?ti:null;d.tx=sn.x;d.ty=sn.y;
+  /* draw it in its own page's coordinates, even while it hovers over another page */
+  const rs=d.svg.getBoundingClientRect(),rt=tsvg.getBoundingClientRect(),P=PAPER[prSettings().paper];
+  const sx=sn.x+(rt.left-rs.left)*P.w/rs.width,sy=sn.y+(rt.top-rs.top)*P.h/rs.height;
+  d.g.setAttribute('transform',`translate(${f1(sx)} ${f1(sy)})`);
+  document.querySelectorAll('.pguides').forEach(el=>{el.innerHTML='';});showGuides(tsvg,sn.g);
+});
+const prEnd=e=>{
+  const d=prDrag;prDrag=null;$('#prPages').classList.remove('panning');
+  if(!d)return;
+  if(!d.piece){if(Math.hypot(e.clientX-d.x0,e.clientY-d.y0)<4&&PR.sel){PR.sel=null;renderBoard(false);}return;}
+  if(d.turn){
+    PR.turning=false;$('#prPages').classList.remove('pr-rotating');PR.sel={p:d.pi,k:d.k};
+    if(d.moved)setXform(d.it,d.it.tp.ang,d.it.tp.fx,d.it.tp.fy);else renderBoard(false);
+    return;
+  }
+  if(d.big){
+    if(d.moved&&d.nx!=null){
+      const P=PAPER[prSettings().paper];
+      PR.pages.forEach(pg=>{if(pg.tile&&pg.tile.key===d.key)for(const it of pg.items)if(it.big){it.x=r1(d.nx-pg.tile.c*P.w);it.y=r1(d.ny-pg.tile.r*P.h);}});
+      commitLayout();PR.pages=layoutPages(PR.tps,prSettings().paper);
+      const pi=PR.pages.findIndex(pg=>pg.tile&&pg.tile.key===d.key&&pg.tile.r===0&&pg.tile.c===0);PR.sel=pi>=0?{p:pi,k:0}:null;
+    }else PR.sel={p:d.pi,k:d.k};
+    renderBoard(false);return;
+  }
+  if(d.moved&&d.ti!=null){
+    PR.pages[d.pi].items.splice(d.k,1);
+    d.it.x=r1(d.tx);d.it.y=r1(d.ty);
+    PR.pages[d.ti].items.push(d.it);
+    PR.sel={p:d.ti,k:PR.pages[d.ti].items.length-1};
+    tidyPages();commitLayout();
+  }else PR.sel={p:d.pi,k:d.k};
+  renderBoard(false);
+};
+$('#prPages').addEventListener('pointerup',prEnd);$('#prPages').addEventListener('pointercancel',prEnd);
+/* turn or flip a piece about its centre, keep it on its page, and remember it */
+function setXform(it,ang,fx,fy){
+  const cx=it.x+it.tp.w/2,cy=it.y+it.tp.h/2;it.tp=xform(it.tp,ang,fx,fy);
+  if(it.big){
+    const key=tkey(it.tp);PR.pages.forEach(pg=>{if(pg.tile&&pg.tile.key===key)for(const o of pg.items)if(o.big)o.tp=it.tp;});
+    commitLayout();const L=st.printLayout[key];if(L){L.ox=0;L.oy=0;save();}
+    PR.pages=layoutPages(PR.tps,prSettings().paper);const pi=PR.pages.findIndex(pg=>pg.tile&&pg.tile.key===key&&pg.tile.r===0&&pg.tile.c===0);PR.sel=pi>=0?{p:pi,k:0}:null;
+  }else{
+    const P=PAPER[prSettings().paper];
+    it.x=r1(clamp(cx-it.tp.w/2,0,Math.max(0,P.w-it.tp.w)));it.y=r1(clamp(cy-it.tp.h/2,0,Math.max(0,P.h-it.tp.h)));
+    commitLayout();
+    /* turned too big for the paper: let the layout spread it over pages */
+    if(it.tp.w>P.w+0.05||it.tp.h>P.h+0.05){PR.pages=layoutPages(PR.tps,prSettings().paper);PR.sel=null;}
+  }
+  renderBoard(false);
+}
+const selItem=()=>PR.sel&&PR.pages[PR.sel.p]&&PR.pages[PR.sel.p].items[PR.sel.k];
+/* Undo in Patterns: the same history as the drawing. A layout step just re-lays the pages;
+   a drawing step (pieces changed) works the slabs out again */
+function prUndo(re){
+  if(!(re?redoStack:hist).length)return;
+  const before=JSON.stringify(st.pieces);
+  re?redo():undo();
+  if(JSON.stringify(st.pieces)!==before){refreshPrinter();return;}
+  PR.pages=layoutPages(PR.tps,prSettings().paper);PR.sel=null;renderBoard(false);
+}
+function rotateSel(by){const it=selItem();if(it)setXform(it,(it.tp.ang||0)+(by||90),it.tp.fx,it.tp.fy);}
+/* flips follow the screen: mirroring a turned piece also mirrors its angle */
+function flipSel(h){const it=selItem();if(!it)return;const t=it.tp;setXform(it,-(t.ang||0),h?!t.fx:t.fx,h?t.fy:!t.fy);}
+$('#prFlipH').addEventListener('click',()=>flipSel(true));
+$('#prFlipV').addEventListener('click',()=>flipSel(false));
+$('#prAng').addEventListener('change',e=>{const it=selItem(),v=parseFloat(e.target.value);if(it&&isFinite(v))setXform(it,v,it.tp.fx,it.tp.fy);else renderBoard(false);});
+$('#prAng').addEventListener('keydown',e=>{if(e.key==='Enter')e.target.blur();e.stopPropagation();});
+$('#prRotate').addEventListener('click',()=>rotateSel(90));
+$('#prAddPage').addEventListener('click',()=>{const pg={items:[],keep:true};const t=PR.pages.findIndex(p=>p.tile);if(t<0)PR.pages.push(pg);else PR.pages.splice(t,0,pg);commitLayout();renderBoard(false);toast('Page added. Drag pieces onto it.');});
+$('#prArrange').addEventListener('click',()=>{pushHist(snap());st.printLayout={};st.printPages=0;save();refreshPrinter();});
+document.addEventListener('keydown',e=>{
+  if($('#printer').hidden||e.target.matches('input,select,textarea')||e.target.isContentEditable)return;
+  if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='z'){e.preventDefault();prUndo(e.shiftKey);return;}
+  if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='y'){e.preventDefault();prUndo(true);return;}
+  if(e.key==='r'||e.key==='R'){e.preventDefault();rotateSel(e.shiftKey?-90:90);}
+});
+/* double-click a page to bring it up close */
+$('#prPages').addEventListener('dblclick',e=>{
+  if(e.target.closest&&e.target.closest('.pitem'))return;
+  const hit=document.elementsFromPoint(e.clientX,e.clientY).find(n=>n.closest&&n.closest('.pr-page')),fig=hit&&hit.closest('.pr-page');if(!fig)return;
+  const vp=$('#prPages').getBoundingClientRect(),k=clamp(Math.min((vp.width-48)/fig.offsetWidth,(vp.height-48)/fig.offsetHeight),0.05,6);
+  PV.k=k;PV.x=(vp.width-fig.offsetWidth*k)/2-fig.offsetLeft*k;PV.y=24-fig.offsetTop*k;boardApply();
+});
+new ResizeObserver(()=>{if(!$('#printer').hidden&&PV.auto)boardFit();}).observe($('#prPages'));
+
+/* save the drawing to a file, and open it again (it also saves itself in this browser as you work) */
+/* ---------- drawings: new, open, save ----------
+   The browser keeps the drawing you're working on. Saving writes it to a file named after the drawing;
+   opening another one first offers to save changes that aren't in a file yet.
+   Each drawing carries its own print arrangement. */
+/* saving files: inside Claude use its downloads; on the open web, a normal browser download */
+async function getDownloads(){
+  if(window.claude&&claude.use){try{const d=await claude.use('downloads');if(d)return d;}catch(e){}}
+  return {save:async({filename,data})=>{
+    const blob=data instanceof Blob?data:new Blob([data],{type:filename.endsWith('.json')?'application/json':'application/octet-stream'});
+    const url=URL.createObjectURL(blob),a=document.createElement('a');
+    a.href=url;a.download=filename;document.body.appendChild(a);a.click();a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),4000);
+  }};
+}
+const fileSafe=n=>(n||'Drawing').replace(/[\\/:*?"<>|]+/g,'-').trim()||'Drawing';
+/* everything a drawing file holds */
+const docData=()=>({app:'cast',version:3,name:st.docName,pieces:st.pieces,strokes:st.strokes,defDepth:st.defDepth,grid:st.grid,snap:st.snap,unit:st.unit,paper:st.paper,grow:st.grow,lineWt:st.lineWt,printLayout:st.printLayout||{},printPages:st.printPages||0});
+async function saveDrawing(){
+  if(!st.docName){st.docName='New drawing';save();}  /* saved as it's named; the computer adds (1), (2)… if the file exists */
+  const data=JSON.stringify(docData(),null,1);
+  const dl=await getDownloads();
+  if(!dl){toast("Saving files isn't available in this view. Your drawing is still kept in this browser.");return false;}
+  try{
+    await dl.save({filename:fileSafe(st.docName)+'.json',data});
+    st.cleanSig=drawSig();save();recentPut(docData());toast(`Saved ${fileSafe(st.docName)}.json.`);return true;
+  }catch(err){toast(err&&err.code==='declined'?'Save cancelled.':"Couldn't save the file here. Your drawing is still kept in this browser.");return false;}
+}
+/* "Save changes?": resolves to true when it's fine to go on and replace the drawing */
+function askSave(what,discardLabel){
+  if(!isDirty())return Promise.resolve(true);
+  const box=$('#askSave');
+  $('#askTitle').textContent='Save changes?';
+  $('#askText').textContent='Latest changes are not saved. Saving will download your file.';
+  $('#askNo').textContent=discardLabel||'Discard';
+  box.hidden=false;$('#askYes').focus();
+  return new Promise(res=>{
+    const done=async v=>{
+      box.hidden=true;off();
+      /* Save just saves and the flow ends there; Discard lets it go on; the X goes back to editing */
+      if(v==='save')await saveDrawing();
+      res(v==='skip');
+    };
+    const yes=()=>done('save'),no=()=>done('skip'),cancel=()=>done('cancel');
+    const key=e=>{if(e.key==='Escape'){e.stopImmediatePropagation();cancel();}};
+    const back=e=>{if(e.target===box)cancel();};
+    const off=()=>{$('#askYes').removeEventListener('click',yes);$('#askNo').removeEventListener('click',no);$('#askCancel').removeEventListener('click',cancel);document.removeEventListener('keydown',key,true);box.removeEventListener('click',back);};
+    $('#askYes').addEventListener('click',yes);$('#askNo').addEventListener('click',no);$('#askCancel').addEventListener('click',cancel);
+    document.addEventListener('keydown',key,true);box.addEventListener('click',back);
+  });
+}
+function startDrawing(o,name){
+  pushHist(snap());
+  st.pieces=o.pieces;st.strokes=o.strokes;st.example=false;
+  st.printLayout=o.printLayout||{};st.printPages=o.printPages||0;
+  st.docName=name;st.cleanSig=drawSig();
+  ui.sel=null;ui.multi=[];ui.inside=null;ui.editJoints=false;ui.joint=null;
+  if(!$('#printer').hidden)closePrinter();
+  save();fit();
+}
+function openData(o,name){
+  for(const k of ['defDepth','grid','snap','unit','paper','grow','lineWt'])if(o[k]!==undefined)st[k]=o[k];
+  startDrawing({pieces:o.pieces,strokes:Array.isArray(o.strokes)?o.strokes:[],printLayout:o.printLayout,printPages:o.printPages},name);
+  leaveHome();
+}
+function openDrawing(file){
+  const rd=new FileReader();
+  rd.onload=()=>{
+    let o;
+    try{o=JSON.parse(rd.result);if(!o||!Array.isArray(o.pieces))throw new Error('not a drawing');}
+    catch(e){toast("That file isn't a Cast drawing.");return;}
+    const name=file.name.replace(/\.json$/i,'').replace(/ \(\d+\)$/,'')||o.name||'Drawing';
+    openData(o,name);recentPut(docData());
+    toast(`Opened ${file.name}.`);
+  };
+  rd.readAsText(file);
+}
+
+/* ---------- Home: no drawing open ----------
+   Just the title, floating over a desktop: start something, open a file, or pick a recent drawing.
+   Recent drawings are copies kept in this browser each time you open or save one. */
+const RECENT='paper3d.recent.v1';
+const recentList=()=>{try{const a=JSON.parse(localStorage.getItem(RECENT)||'[]');return Array.isArray(a)?a:[];}catch(e){return [];}};
+function recentSet(a){try{localStorage.setItem(RECENT,JSON.stringify(a.slice(0,12)));}catch(e){}}
+function recentPut(d){if(!d.name)return;const a=recentList().filter(r=>r.name.toLowerCase()!==d.name.toLowerCase());a.unshift({name:d.name,at:Date.now(),data:d});recentSet(a);}
+function ago(t){
+  const m=Math.round((Date.now()-t)/60000);
+  if(m<1)return 'Just now';if(m<60)return `${m} min ago`;
+  const hr=Math.round(m/60);if(hr<24)return `${hr} h ago`;
+  const dd=Math.round(hr/24);if(dd===1)return 'Yesterday';if(dd<7)return `${dd} days ago`;
+  return new Date(t).toLocaleDateString(undefined,{day:'numeric',month:'short',year:'numeric'});
+}
+/* a small picture of a drawing: its Front view (or its sketch strokes) */
+function thumbSVG(d){
+  const parts=[],B=[Infinity,Infinity,-Infinity,-Infinity];
+  const add=(P,cls)=>{for(const q of P){B[0]=Math.min(B[0],q[0]);B[1]=Math.min(B[1],q[1]);B[2]=Math.max(B[2],q[0]);B[3]=Math.max(B[3],q[1]);}parts.push([P,cls]);};
+  const ps=d.pieces||[];
+  if(ps.length){
+    const vk=ps.some(p=>p.out&&p.out.front)||!ps.some(p=>p.out&&p.out.side)?'front':'side';
+    for(const p of ps.filter(p=>!p.cutOf))add(flatOutline(outline(p,vk)),'tp');
+    for(const p of ps.filter(p=>p.cutOf))add(flatOutline(outline(p,vk)),'th2');
+  }else for(const s of d.strokes||[])add(s.pts,'ts');
+  if(!parts.length)return '';
+  const w=Math.max(1,B[2]-B[0]),hh=Math.max(1,B[3]-B[1]),pad=Math.max(w,hh)*0.06;
+  const body=parts.map(([P,c])=>`<path class="${c}" d="M${P.map(q=>`${f1(q[0])} ${f1(-q[1])}`).join('L')}${c==='ts'?'':'Z'}"/>`).join('');
+  return `<svg viewBox="${f1(B[0]-pad)} ${f1(-B[3]-pad)} ${f1(w+2*pad)} ${f1(hh+2*pad)}" preserveAspectRatio="xMidYMid meet" aria-hidden="true">${body}</svg>`;
+}
+const ICON_NEW='<svg class="lucide lucide-plus big" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"/><path d="M12 5v14"/></svg>';
+const ICON_OPEN='<svg class="lucide lucide-folder big" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></svg>';
+function renderHome(){
+  const card=(id,th,nm,when,extra='')=>`<button class="hcard" ${id}><span class="th">${th}</span><span class="meta"><span class="nm">${esc(nm)}</span><span class="when">${esc(when)}</span></span>${extra}</button>`;
+  $('#homeStart').innerHTML=card('id="homeNew"',ICON_NEW,'New drawing','Start from an empty sheet')+card('id="homeOpen"',ICON_OPEN,'Open file…','A drawing you saved')+card('id="homeExample"',thumbSVG({strokes:exampleStrokes()}),'Example','A stool, sketched');
+  const R=recentList();
+  $('#homeRecent').innerHTML=R.map((r,i)=>card(`data-r="${i}" title="Open ${esc(r.name)}"`,thumbSVG(r.data),r.name,ago(r.at),`<span class="hx" role="button" tabindex="0" data-x="${i}" title="Remove from Recent" aria-label="Remove ${esc(r.name)} from Recent"><svg class="lucide lucide-x" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></span>`)).join('');
+  $('#homeRecent').hidden=!R.length;$('#homeEmpty').hidden=!!R.length;
+}
+/* the desktop is centred: as wide as its longest row of cards (or what fits), so rows line up under the headings */
+function homeWidth(){
+  const el=$('#home');if(el.hidden)return;
+  const W=el.clientWidth-48,cw=200,gap=16,most=Math.max(3,recentList().length),n=Math.max(1,Math.min(most,Math.floor((W+gap)/(cw+gap))));
+  $('.home-in').style.width=(n*cw+(n-1)*gap)+'px';
+}
+window.addEventListener('resize',homeWidth);
+function showHome(){
+  st.home=true;document.body.classList.add('home');$('#home').hidden=false;
+  if(!$('#printer').hidden)closePrinter();
+  renderHome();homeWidth();
+}
+/* leaving the drawing you're on for Home: it's put aside (Undo brings it back) */
+function goHome(){
+  closePop();toggleMenu(false);
+  startDrawing({pieces:[],strokes:[]},null);
+  showHome();save();
+}
+/* the drawing fades out, then Home fades in */
+/* a motion token in milliseconds, read from the CSS so timers stay in step with the transitions */
+function motionMs(name,fallback){
+  const v=getComputedStyle(document.documentElement).getPropertyValue(name).trim(),n=parseFloat(v);
+  return isFinite(n)?(/ms$/.test(v)?n:n*1000):fallback;
+}
+function fadeHome(){
+  const m=document.querySelector('main');
+  m.classList.add('fading');
+  setTimeout(()=>{m.classList.remove('fading');goHome();},motionMs('--motion-slow-exit',250)+10);
+}
+function leaveHome(){
+  if(!st.home)return;
+  st.home=false;document.body.classList.remove('home');$('#home').hidden=true;save();
+  const m=document.querySelector('main');m.classList.remove('entering');void m.offsetWidth;m.classList.add('entering');
+  requestAnimationFrame(fit);
+}
+$('#homeBtn').addEventListener('click',async()=>{if(st.home)return;if(await askSave('Going back home'))goHome();});
+$('#home').addEventListener('click',e=>{
+  const x=e.target.closest('[data-x]');
+  if(x){e.stopPropagation();const a=recentList();a.splice(+x.dataset.x,1);recentSet(a);renderHome();homeWidth();return;}
+  const c=e.target.closest('.hcard');if(!c)return;
+  if(c.id==='homeNew'){startDrawing({pieces:[],strokes:[]},null);leaveHome();}
+  else if(c.id==='homeOpen')pickFile();
+  else if(c.id==='homeExample'){startDrawing({pieces:[],strokes:exampleStrokes()},null);st.example=true;leaveHome();}
+  else if(c.dataset.r!==undefined){const r=recentList()[+c.dataset.r];if(r)openData(r.data,r.name);}
+});
+$('#home').addEventListener('keydown',e=>{const x=e.target.closest('[data-x]');if(x&&(e.key==='Enter'||e.key===' ')){e.preventDefault();x.click();}});
+$('#saveDrawing').addEventListener('click',()=>{toggleMenu(false);saveDrawing();});
+/* Ctrl/⌘ S saves (downloads) the drawing, in Drawing and in Patterns */
+document.addEventListener('keydown',e=>{
+  if(!(e.metaKey||e.ctrlKey)||e.shiftKey||e.altKey||e.key.toLowerCase()!=='s')return;
+  e.preventDefault();
+  if(st.home||!$('#askSave').hidden)return;
+  if(document.activeElement&&document.activeElement.id==='docName')document.activeElement.blur();
+  toggleMenu(false);saveDrawing();
+},true);
+/* Open: with nothing unsaved the file picker opens. With unsaved changes it asks first:
+   Save saves and stops there; Discard puts the drawing aside and goes Home, where you pick what to open */
+function pickFile(){$('#openFile').value='';$('#openFile').click();}
+$('#openDrawing').addEventListener('click',async()=>{
+  toggleMenu(false);
+  if(!isDirty()){pickFile();return;}
+  /* Discard & open…: the file picker opens on that click, while the drawing fades to Home behind it.
+     Pick a file and it opens from Home; close the picker and you stay Home */
+  if(await askSave('Opening another drawing','Discard & open…')){pickFile();fadeHome();}
+});
+$('#openFile').addEventListener('change',e=>{const f=e.target.files&&e.target.files[0];if(f){toggleMenu(false);openDrawing(f);}});
+
+/* first visit: Home */
+if(!load())st.home=true;
+if(st.docName==='Untitled')st.docName=null;
+if(st.home)showHome();
+new ResizeObserver(()=>render()).observe($('.sheet'));
+requestAnimationFrame(fit);
+showDoc();
+init3D();schedule3D();
+$('#reset3d').addEventListener('click',()=>{if(V3.ready){fit3D();draw3D();}});
+})();
+
+</script>
+</body>
+</html>
