@@ -4,7 +4,7 @@
 Cast's look comes from Stylist (https://github.com/g-ab/stylist). Its style files sit at the repo root:
 `stylist-theme.css` (generated: never edit by hand), `app-tokens.css` (Cast's own tokens), `stylist-icons.css`,
 `stylist.json` (the recipe), `components.json` and `brand/`. Load order: theme → app tokens → icons → brand.
-`--clay` and the `.clay` classes are the clay material colour, not the old tool name: keep them.
+`--clay` and the `.clay` classes are the clay material colour (the pottery clay). Keep them.
 
 When gab pastes a **"Stylist setup for Cast"** block:
 1. Get Stylist: clone https://github.com/g-ab/stylist (public) and run `python3 build.py` in it.

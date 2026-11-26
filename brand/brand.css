@@ -1,7 +1,7 @@
-/* Clay brand · Cast. Shows the light or dark file to match the theme.
+/* Stylist brand · Cast. Shows the light or dark file to match the theme.
    Use both files, side by side:
    <img class="brand-light" src="/brand/logo.svg" alt="Cast"><img class="brand-dark" src="/brand/logo-dark.svg" alt="Cast">
-   Size them by height only (width: auto): Clay trimmed every file to its drawing, so the height you set is the height you see. */
+   Size them by height only (width: auto): Stylist trimmed every file to its drawing, so the height you set is the height you see. */
 .brand-dark { display: none; }
 :root[data-theme="dark"] .brand-light { display: none; }
 :root[data-theme="dark"] .brand-dark { display: revert; }
