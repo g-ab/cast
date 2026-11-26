@@ -16,5 +16,10 @@ When gab pastes a **"Stylist setup for Cast"** block:
    and commit with that list in the message ("Restyle: …"). One restyle per commit, so it can be undone in one step.
 5. Publish Cast as usual, so gab can check it live.
 
+When gab says **"upgrade Stylist"**: do steps 1 and 3–5 above, but run `export.py` with no setup:
+`python3 <stylist>/export.py <this repo>`. The files are rewritten in Stylist's latest format and Cast's look
+must not change: if "Changed tokens" lists anything, show gab before committing. Commit as "Upgrade Stylist: …"
+with what's new.
+
 A new logo, mark or favicon isn't in a pasted setup: for those gab exports the full package from Stylist;
 replace the files in `brand/` from it.
