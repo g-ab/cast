@@ -11,7 +11,7 @@ When gab pastes a **"Stylist setup for Cast"** block:
    It needs `pip install playwright` and a Chromium (`python3 -m playwright install chromium`, or `STYLIST_CHROME=/path/to/chrome`).
 2. Save the pasted text to a file and run `python3 <stylist>/export.py <this repo> <that file>`.
 3. If it stops (exit code 2), the theme file was edited by hand since the last export. Show gab the list and stop:
-   he resolves them in Stylist (Custom view → Open app style…) and pastes a new setup. Never overwrite them.
+   he resolves them in Stylist (Share → Open from GitHub… → g-ab/cast) and pastes a new setup. Never overwrite them.
 4. Otherwise show gab the "Changed tokens" list, check Cast still looks right in light and dark mode,
    and commit with that list in the message ("Restyle: …"). One restyle per commit, so it can be undone in one step.
 5. Publish Cast as usual, so gab can check it live.
