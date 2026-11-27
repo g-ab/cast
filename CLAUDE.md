@@ -21,5 +21,5 @@ When gab says **"upgrade Stylist"**: do steps 1 and 3–5 above, but run `export
 must not change: if "Changed tokens" lists anything, show gab before committing. Commit as "Upgrade Stylist: …"
 with what's new.
 
-A new logo, mark or favicon isn't in a pasted setup: for those gab exports the full package from Stylist;
-replace the files in `brand/` from it.
+A new logo, mark or favicon isn't in a pasted setup: gab gives a .zip from Stylist's Brand tab
+("Download brand files"). Replace the files in `brand/` with it, check light and dark mode, and commit.
