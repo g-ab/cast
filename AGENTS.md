@@ -3,7 +3,7 @@
 ## Cast and its style
 - `--clay` and the `.clay` classes are the clay material colour (the pottery clay), not a style setting. Keep them.
 - After a restyle, an upgrade or new brand files: publish Cast as usual, so gab can check it live.
-- If export.py stops on hand edits, gab resolves them in Stylist: Share → Open from GitHub… → `g-ab/cast`, then pastes a new setup.
+- If export.py stops on hand edits, gab resolves them in Stylist: Share → Open from GitHub… → `g-ab/cast`, then sends a new setup.
 
 <!-- stylist:start -->
 ## Stylist
@@ -15,13 +15,16 @@ before the app's own styles.
 To run Stylist: clone https://github.com/g-ab/stylist, run `python3 build.py` in it, and have Python 3,
 `pip install playwright` and `python3 -m playwright install chromium`.
 
-- **"restyle the app"** + a pasted "Stylist setup": save the setup to a file, then run
-  `python3 <stylist>/export.py <this repo> <that file>`.
+- **"restyle the app"** + a "Stylist setup" (pasted, or attached as a .md file): save it to a file as it is,
+  then run `python3 <stylist>/export.py <this repo> <that file>`. Logos changed in Stylist are inside it.
 - **"upgrade Stylist"**: run `python3 <stylist>/export.py <this repo>` (no setup). The look must not change:
   if "Changed tokens" lists anything, show it before committing.
-- **New brand files** (a .zip from Stylist's "Download brand files"): replace the files in brand/ with it.
+- **New brand files as a .zip** (Stylist's "Download brand files", for logos too big for the setup):
+  replace the files in brand/ with it.
 
-If export.py stops (exit code 2), the theme file was edited by hand: show the list and stop, never overwrite it.
+If export.py stops (exit code 2), something in the app changed since the setup was made (the theme file
+edited by hand, a logo replaced) or a logo arrived damaged: show the message and stop, never overwrite.
+If it lists logos "removed in Stylist", ask before deleting them.
 Otherwise show the "Changed tokens" list, check the app in light and dark mode, and commit
 (one restyle or upgrade per commit).
 
