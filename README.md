@@ -1,6 +1,6 @@
 # Cast
 
-Cast turns a quick sketch into shapes of 2D patterns you can print, cut them out and use to slab build with clay.
+Cast turns a quick sketch into shapes for 2D patterns you can print, cut them out and use to slab build with clay.
 
 You draw the object in three flat views (front, side, top), straighten the sketch into shapes, and Cast works out every slab you need: one flat template for each face. It lays the templates out on A4 or US Letter pages at 1:1, enlarged to make up for the clay shrinking as it dries and fires. Then you download them as a PDF.
 
