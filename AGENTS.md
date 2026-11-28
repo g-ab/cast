@@ -3,7 +3,7 @@
 ## Cast and its style
 - `--clay` and the `.clay` classes are the clay material colour (the pottery clay), not a style setting. Keep them.
 - After a restyle, an upgrade or new brand files: publish Cast as usual, so gab can check it live.
-- If export.py stops on hand edits, gab resolves them in Stylist: Share → Open from GitHub… → `g-ab/cast`, then sends a new setup.
+- If export.py stops on hand edits, gab resolves them in Stylist: open https://g-ab.github.io/stylist/?app=g-ab/cast (or Open from GitHub on the start screen), then sends a new setup.
 
 <!-- stylist:start -->
 ## Stylist
